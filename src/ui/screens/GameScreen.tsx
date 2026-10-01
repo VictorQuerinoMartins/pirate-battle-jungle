@@ -25,10 +25,11 @@ export function GameScreen() {
 
     async function start() {
       await app.init({
+        resolution: window.devicePixelRatio,
         width: gameConfig.arena.width,
         height: gameConfig.arena.height,
         background: '#1b6ca8',
-        autoStart: false, // our GameLoop decides when to draw
+        autoStart: false,
         
       });
       initialized = true;
@@ -44,9 +45,12 @@ export function GameScreen() {
         ),
         loadImage(`${ASSETS}tilesheet/tiles_sheet.png`),
       ]);
-      if (disposed) return; // the cleanup already destroyed the app
+      if (disposed) return;
 
       container.appendChild(app.canvas);
+      app.canvas.style.width = '100%';
+      app.canvas.style.height = '100%';
+      app.canvas.style.objectFit = 'contain';
       const state = createGameState();
       const renderer = new Renderer(app, textures, tileSheet, state);
 
@@ -61,7 +65,7 @@ export function GameScreen() {
     }
 
     start().catch((error: unknown) => {
-      console.error(error); // proper error screen comes in a later step
+      console.error(error);
     });
 
     return () => {
@@ -72,5 +76,5 @@ export function GameScreen() {
     };
   }, []);
 
-  return <div ref={hostRef} />;
+    return <div ref={hostRef} style={{ width: '100%', height: '100%' }} />;
 }

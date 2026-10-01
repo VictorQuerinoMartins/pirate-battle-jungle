@@ -1,6 +1,6 @@
 import { gameConfig } from '../config/gameConfig';
 import type { GameInput } from '../input/gameInput';
-import { pushOutOfCircle, type Circle } from './geometry';
+import { circlesOverlap, pushOutOfCircle, type Circle } from './geometry';
 
 export interface ProjectileState {
   x: number;
@@ -88,10 +88,19 @@ function createProjectile(x: number, y: number, angle: number): ProjectileState 
 }
 
 function updateProjectiles(state: GameState, dt: number): void {
+  const { arena } = gameConfig;
+
   for (const projectile of state.projectiles) {
     projectile.x += projectile.vx * dt;
     projectile.y += projectile.vy * dt;
     projectile.timeLeft -= dt;
   }
-  state.projectiles = state.projectiles.filter((p) => p.timeLeft > 0);
+
+  state.projectiles = state.projectiles.filter((p) => {
+    const insideArena = p.x >= 0 && p.x <= arena.width && p.y >= 0 && p.y <= arena.height;
+    const hitsIsland = state.islands.some((island) =>
+      circlesOverlap({ x: p.x, y: p.y, radius: 0 }, island),
+    );
+    return p.timeLeft > 0 && insideArena && !hitsIsland;
+  });
 }

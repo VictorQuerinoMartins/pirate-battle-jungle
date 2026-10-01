@@ -149,31 +149,62 @@ describe("updateGame", () => {
     updateGame(state, 0.1, input);
 
     expect(state.projectiles).toHaveLength(0);
-
-    it("fires to the left and to the right with a broadside", () => {
-      const left = createGameState();
-      const leftInput = new GameInput();
-      leftInput.press("fireLeft");
-      updateGame(left, 0.01, leftInput);
-
-      const right = createGameState();
-      const rightInput = new GameInput();
-      rightInput.press("fireRight");
-      updateGame(right, 0.01, rightInput);
-
-      expect(left.projectiles[0].vx).toBeLessThan(0); // the ship faces up, so left is west
-      expect(right.projectiles[0].vx).toBeGreaterThan(0);
-    });
-
-    it("starts the shot at the edge of the ship", () => {
-      const state = createGameState();
-      const input = new GameInput();
-      input.press("fireFront");
-
-      updateGame(state, 0.01, input);
-
-      const shot = state.projectiles[0];
-      expect(state.player.y - shot.y).toBeGreaterThan(radius - 1);
-    });
   });
+
+  it("fires to the left and to the right with a broadside", () => {
+    const left = createGameState();
+    const leftInput = new GameInput();
+    leftInput.press("fireLeft");
+    updateGame(left, 0.01, leftInput);
+
+    const right = createGameState();
+    const rightInput = new GameInput();
+    rightInput.press("fireRight");
+    updateGame(right, 0.01, rightInput);
+
+    expect(left.projectiles[0].vx).toBeLessThan(0);
+    expect(right.projectiles[0].vx).toBeGreaterThan(0);
+  });
+
+  it("starts the shot at the edge of the ship", () => {
+    const state = createGameState();
+    const input = new GameInput();
+    input.press("fireFront");
+
+    updateGame(state, 0.01, input);
+
+    const shot = state.projectiles[0];
+    expect(state.player.y - shot.y).toBeGreaterThan(radius - 1);
+  });
+});
+
+it("spawns an enemy after the spawn interval", () => {
+  const state = createGameState();
+  const input = new GameInput();
+
+  updateGame(state, gameConfig.spawn.intervalMs / 1000 + 0.01, input);
+
+  expect(state.enemies).toHaveLength(1);
+});
+
+it("never spawns more than the maximum number of enemies", () => {
+  const state = createGameState();
+  const input = new GameInput();
+
+  for (let i = 0; i < 50; i++) updateGame(state, 1, input);
+
+  expect(state.enemies.length).toBeLessThanOrEqual(gameConfig.spawn.maxEnemies);
+});
+
+it("moves a chaser toward the player", () => {
+  const state = createGameState();
+  const input = new GameInput();
+  state.enemies.push({ x: 100, y: 100, angle: 0, hp: 30 });
+  const before = Math.hypot(state.player.x - 100, state.player.y - 100);
+
+  updateGame(state, 0.1, input);
+
+  const enemy = state.enemies[0];
+  const after = Math.hypot(state.player.x - enemy.x, state.player.y - enemy.y);
+  expect(after).toBeLessThan(before);
 });

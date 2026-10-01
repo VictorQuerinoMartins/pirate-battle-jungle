@@ -24,6 +24,7 @@ export interface GameConfig {
     readonly maxHp: number;
     readonly speed: number;
     readonly contactDamage: number;
+    readonly radius: number;
   };
   readonly shooter: {
     readonly maxHp: number;
@@ -47,9 +48,9 @@ export const gameConfig: GameConfig = {
     ],
   },
   match: { durationSeconds: 120 },
-   player: { maxHp: 100, speed: 220, rotationSpeed: 3, radius: 20, fireCooldownMs: 400 },
+  player: { maxHp: 100, speed: 220, rotationSpeed: 3, radius: 20, fireCooldownMs: 400 },
   projectile: { speed: 500, damage: 10, lifetimeMs: 1500 },
-  chaser: { maxHp: 30, speed: 110, contactDamage: 10 },
+  chaser: { maxHp: 30, speed: 110, contactDamage: 10, radius: 20 },
   shooter: { maxHp: 20, speed: 80, fireCooldownMs: 1500 },
   spawn: { intervalMs: 2000, maxEnemies: 8 },
 };

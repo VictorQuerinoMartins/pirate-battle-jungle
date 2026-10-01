@@ -1,11 +1,12 @@
-import { gameConfig } from '../config/gameConfig';
-import type { Action, GameInput } from '../input/gameInput';
-import { circlesOverlap, pushOutOfCircle, type Circle } from './geometry';
+import { gameConfig } from "../config/gameConfig";
+import type { Action, GameInput } from "../input/gameInput";
+import { circlesOverlap, pushOutOfCircle, type Circle } from "./geometry";
+import { createRng } from "./rng";
 
 const SHOTS: readonly { action: Action; angleOffset: number }[] = [
-  { action: 'fireFront', angleOffset: 0 },
-  { action: 'fireLeft', angleOffset: -Math.PI / 2 },
-  { action: 'fireRight', angleOffset: Math.PI / 2 },
+  { action: "fireFront", angleOffset: 0 },
+  { action: "fireLeft", angleOffset: -Math.PI / 2 },
+  { action: "fireRight", angleOffset: Math.PI / 2 },
 ];
 
 export interface ProjectileState {
@@ -24,35 +25,53 @@ export interface PlayerState {
   fireCooldown: number;
 }
 
+export interface EnemyState {
+  x: number;
+  y: number;
+  angle: number;
+  hp: number;
+}
+
 export interface GameState {
   player: PlayerState;
   islands: readonly Circle[];
   projectiles: ProjectileState[];
+  enemies: EnemyState[];
+  spawnTimer: number;
+  random: () => number;
 }
 
-export function createGameState(): GameState {
+export function createGameState(seed = 1): GameState {
   const { arena, player } = gameConfig;
   return {
     player: {
       x: arena.width / 2,
       y: arena.height / 2,
       angle: -Math.PI / 2,
-            hp: player.maxHp,
+      hp: player.maxHp,
       fireCooldown: 0,
     },
     islands: arena.islands,
     projectiles: [],
+    enemies: [],
+    spawnTimer: 0,
+    random: createRng(seed),
   };
 }
 
-export function updateGame(state: GameState, dt: number, input: GameInput): void {
+export function updateGame(
+  state: GameState,
+  dt: number,
+  input: GameInput,
+): void {
   const { arena, player: config } = gameConfig;
   const player = state.player;
 
-  const turn = Number(input.isDown('rotateRight')) - Number(input.isDown('rotateLeft'));
+  const turn =
+    Number(input.isDown("rotateRight")) - Number(input.isDown("rotateLeft"));
   player.angle += turn * config.rotationSpeed * dt;
 
-  if (input.isDown('forward')) {
+  if (input.isDown("forward")) {
     player.x += Math.cos(player.angle) * config.speed * dt;
     player.y += Math.sin(player.angle) * config.speed * dt;
   }
@@ -69,7 +88,7 @@ export function updateGame(state: GameState, dt: number, input: GameInput): void
   player.x = clamp(player.x, config.radius, arena.width - config.radius);
   player.y = clamp(player.y, config.radius, arena.height - config.radius);
 
-    player.fireCooldown = Math.max(0, player.fireCooldown - dt);
+  player.fireCooldown = Math.max(0, player.fireCooldown - dt);
   if (player.fireCooldown === 0) {
     const shot = SHOTS.find((s) => input.isDown(s.action));
     if (shot) {
@@ -82,13 +101,18 @@ export function updateGame(state: GameState, dt: number, input: GameInput): void
   }
 
   updateProjectiles(state, dt);
+  updateEnemies(state, dt);
 }
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-function createProjectile(x: number, y: number, angle: number): ProjectileState {
+function createProjectile(
+  x: number,
+  y: number,
+  angle: number,
+): ProjectileState {
   const { speed, lifetimeMs } = gameConfig.projectile;
   return {
     x,
@@ -109,10 +133,50 @@ function updateProjectiles(state: GameState, dt: number): void {
   }
 
   state.projectiles = state.projectiles.filter((p) => {
-    const insideArena = p.x >= 0 && p.x <= arena.width && p.y >= 0 && p.y <= arena.height;
+    const insideArena =
+      p.x >= 0 && p.x <= arena.width && p.y >= 0 && p.y <= arena.height;
     const hitsIsland = state.islands.some((island) =>
       circlesOverlap({ x: p.x, y: p.y, radius: 0 }, island),
     );
     return p.timeLeft > 0 && insideArena && !hitsIsland;
   });
 }
+
+  function createChaser(state: GameState): EnemyState {
+    const { arena, chaser } = gameConfig;
+    return {
+      x: state.random() < 0.5 ? 0 : arena.width,
+      y: state.random() * arena.height,
+      angle: 0,
+      hp: chaser.maxHp,
+    };
+  }
+
+  function updateEnemies(state: GameState, dt: number): void {
+    const { spawn, chaser } = gameConfig;
+    const player = state.player;
+
+    state.spawnTimer += dt;
+    if (state.spawnTimer >= spawn.intervalMs / 1000) {
+      state.spawnTimer = 0;
+      if (state.enemies.length < spawn.maxEnemies) {
+        state.enemies.push(createChaser(state));
+      }
+    }
+
+    for (const enemy of state.enemies) {
+      enemy.angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+      enemy.x += Math.cos(enemy.angle) * chaser.speed * dt;
+      enemy.y += Math.sin(enemy.angle) * chaser.speed * dt;
+
+      for (const island of state.islands) {
+        const pushed = pushOutOfCircle(
+          { x: enemy.x, y: enemy.y, radius: chaser.radius },
+          island,
+        );
+        enemy.x = pushed.x;
+        enemy.y = pushed.y;
+      }
+    }
+  }
+

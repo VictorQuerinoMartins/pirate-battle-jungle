@@ -15,12 +15,15 @@ const SAND_COLOR = 0xf9d49d;
 const GRASS_COLOR = 0x89b738;
 const SHALLOW_COLOR = 0xb8efff;
 const SHALLOW_WIDTH = 14;
+const PROJECTILE_RADIUS = 4;
+const PROJECTILE_COLOR = 0x2b2b2b;
 
 export class Renderer {
   private readonly app: Application;
   private readonly textures: TextureMap;
   private readonly playerSprite: Sprite;
   private playerLevel: DamageLevel = 0;
+  private readonly projectileGraphics = new Graphics();
 
   constructor(app: Application, textures: TextureMap, tileSheet: Texture, state: GameState) {
     this.app = app;
@@ -47,8 +50,9 @@ export class Renderer {
     this.playerSprite = new Sprite(this.shipTexture(0));
     this.playerSprite.anchor.set(0.5);
     this.playerSprite.scale.set(SHIP_SCALE);
+    
 
-    app.stage.addChild(water, islands, this.playerSprite);
+    app.stage.addChild(water, islands, this.projectileGraphics, this.playerSprite);
     this.render(state);
   }
 
@@ -62,7 +66,14 @@ export class Renderer {
     }
 
     this.playerSprite.position.set(player.x, player.y);
+    
     this.playerSprite.rotation = player.angle + SPRITE_ROTATION_OFFSET;
+    this.projectileGraphics.clear();
+    for (const projectile of state.projectiles) {
+      this.projectileGraphics
+        .circle(projectile.x, projectile.y, PROJECTILE_RADIUS)
+        .fill(PROJECTILE_COLOR);
+    }
 
     this.app.render();
   }

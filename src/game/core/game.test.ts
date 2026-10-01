@@ -64,4 +64,20 @@ describe('updateGame', () => {
     expect(state.player.x).toBe(startX);
     expect(state.player.y).toBe(startY);
   });
+
+    it('does not let the ship enter an island', () => {
+    const state = createGameState();
+    const input = new GameInput();
+    const island = state.islands[0];
+    
+    state.player.x = island.x + island.radius + 100;
+    state.player.y = island.y;
+    state.player.angle = Math.PI;
+    input.press('forward');
+
+    for (let i = 0; i < 200; i++) updateGame(state, 0.05, input);
+
+    const distance = Math.hypot(state.player.x - island.x, state.player.y - island.y);
+    expect(distance).toBeGreaterThanOrEqual(radius + island.radius - 0.001);
+  });
 });

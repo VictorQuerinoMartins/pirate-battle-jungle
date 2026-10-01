@@ -1,5 +1,6 @@
 import { gameConfig } from '../config/gameConfig';
 import type { GameInput } from '../input/gameInput';
+import { pushOutOfCircle, type Circle } from './geometry';
 
 export interface PlayerState {
   x: number;
@@ -10,6 +11,7 @@ export interface PlayerState {
 
 export interface GameState {
   player: PlayerState;
+  islands: readonly Circle[];
 }
 
 export function createGameState(): GameState {
@@ -21,6 +23,7 @@ export function createGameState(): GameState {
       angle: -Math.PI / 2,
       hp: player.maxHp,
     },
+    islands: arena.islands,
   };
 }
 
@@ -34,6 +37,15 @@ export function updateGame(state: GameState, dt: number, input: GameInput): void
   if (input.isDown('forward')) {
     player.x += Math.cos(player.angle) * config.speed * dt;
     player.y += Math.sin(player.angle) * config.speed * dt;
+  }
+
+  for (const island of state.islands) {
+    const pushed = pushOutOfCircle(
+      { x: player.x, y: player.y, radius: config.radius },
+      island,
+    );
+    player.x = pushed.x;
+    player.y = pushed.y;
   }
 
   player.x = clamp(player.x, config.radius, arena.width - config.radius);

@@ -1,5 +1,11 @@
+import type { Circle } from '../core/geometry';
 export interface GameConfig {
-  readonly arena: { readonly width: number; readonly height: number };
+      readonly arena: {
+    readonly width: number;
+    readonly height: number;
+    readonly islands: readonly Circle[];
+  };
+
   readonly match: { readonly durationSeconds: number };
 
   readonly player: {
@@ -31,7 +37,15 @@ export interface GameConfig {
 }
 
 export const gameConfig: GameConfig = {
-  arena: { width: 1280, height: 720 },
+    arena: {
+    width: 1280,
+    height: 720,
+    islands: [
+      { x: 300, y: 200, radius: 90 },
+      { x: 900, y: 260, radius: 110 },
+      { x: 640, y: 560, radius: 80 },
+    ],
+  },
   match: { durationSeconds: 120 },
    player: { maxHp: 100, speed: 220, rotationSpeed: 3, radius: 20, fireCooldownMs: 400 },
   projectile: { speed: 500, damage: 10, lifetimeMs: 1500 },

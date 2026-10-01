@@ -69,7 +69,7 @@ describe('updateGame', () => {
     const state = createGameState();
     const input = new GameInput();
     const island = state.islands[0];
-    
+
     state.player.x = island.x + island.radius + 100;
     state.player.y = island.y;
     state.player.angle = Math.PI;
@@ -78,6 +78,40 @@ describe('updateGame', () => {
     for (let i = 0; i < 200; i++) updateGame(state, 0.05, input);
 
     const distance = Math.hypot(state.player.x - island.x, state.player.y - island.y);
-    expect(distance).toBeGreaterThanOrEqual(radius + island.radius - 0.001);
+      expect(distance).toBeGreaterThanOrEqual(radius + island.radius - 0.001);
+  });
+
+  it('fires a projectile in the facing direction when fireFront is pressed', () => {
+    const state = createGameState();
+    const input = new GameInput();
+    input.press('fireFront');
+
+    updateGame(state, 0.01, input);
+
+    expect(state.projectiles).toHaveLength(1);
+    expect(state.projectiles[0].vy).toBeLessThan(0);
+  });
+
+  it('respects the fire cooldown', () => {
+    const state = createGameState();
+    const input = new GameInput();
+    input.press('fireFront');
+
+    updateGame(state, 0.01, input);
+    updateGame(state, 0.01, input);
+
+    expect(state.projectiles).toHaveLength(1);
+  });
+
+  it('removes projectiles after their lifetime', () => {
+    const state = createGameState();
+    const input = new GameInput();
+    input.press('fireFront');
+    updateGame(state, 0.01, input);
+    input.release('fireFront');
+
+    updateGame(state, 2, input);
+
+    expect(state.projectiles).toHaveLength(0);
   });
 });

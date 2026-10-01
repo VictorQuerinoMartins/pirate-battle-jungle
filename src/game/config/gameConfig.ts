@@ -7,6 +7,7 @@ export interface GameConfig {
     readonly speed: number;
     readonly fireCooldownMs: number;
     readonly rotationSpeed: number;
+    readonly radius: number
   };
   readonly projectile: {
     readonly speed: number;
@@ -32,7 +33,7 @@ export interface GameConfig {
 export const gameConfig: GameConfig = {
   arena: { width: 1280, height: 720 },
   match: { durationSeconds: 120 },
-  player: { maxHp: 100, speed: 220, rotationSpeed: 3, fireCooldownMs: 400 },
+   player: { maxHp: 100, speed: 220, rotationSpeed: 3, radius: 20, fireCooldownMs: 400 },
   projectile: { speed: 500, damage: 10, lifetimeMs: 1500 },
   chaser: { maxHp: 30, speed: 110, contactDamage: 10 },
   shooter: { maxHp: 20, speed: 80, fireCooldownMs: 1500 },

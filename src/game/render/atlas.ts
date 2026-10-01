@@ -2,6 +2,22 @@ import { Assets, Rectangle, Texture } from 'pixi.js';
 
 export type TextureMap = Map<string, Texture>;
 
+export function loadImage(url: string): Promise<Texture> {
+  return Assets.load<Texture>(url);
+}
+
+export function gridTile(sheet: Texture, tileNumber: number, tileSize = 64): Texture {
+  const columns = Math.floor(sheet.width / tileSize);
+  const index = tileNumber - 1;
+  const frame = new Rectangle(
+    (index % columns) * tileSize,
+    Math.floor(index / columns) * tileSize,
+    tileSize,
+    tileSize,
+  );
+  return new Texture({ source: sheet.source, frame });
+}
+
 export async function loadXmlAtlas(imageUrl: string, xmlUrl: string): Promise<TextureMap> {
   const [image, response] = await Promise.all([
     Assets.load<Texture>(imageUrl),
@@ -25,7 +41,10 @@ export async function loadXmlAtlas(imageUrl: string, xmlUrl: string): Promise<Te
       Number(node.getAttribute('height')),
     );
     textures.set(name, new Texture({ source: image.source, frame }));
+    
   }
 
   return textures;
+
+  
 }

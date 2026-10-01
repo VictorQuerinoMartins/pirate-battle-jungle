@@ -4,8 +4,8 @@ import { gameConfig } from '../../game/config/gameConfig';
 import { createGameState, updateGame } from '../../game/core/game';
 import { GameLoop } from '../../game/core/gameLoop';
 import { GameInput } from '../../game/input/gameInput';
-import { loadXmlAtlas } from '../../game/render/atlas';
 import { Renderer } from '../../game/render/renderer';
+import { loadImage, loadXmlAtlas } from '../../game/render/atlas';
 
 const ASSETS = `${import.meta.env.BASE_URL}assets/`;
 
@@ -37,15 +37,18 @@ export function GameScreen() {
         return;
       }
 
-      const textures = await loadXmlAtlas(
-        `${ASSETS}spritesheet/ships_miscellaneous_sheet.png`,
-        `${ASSETS}spritesheet/ships_miscellaneous_sheet.xml`,
-      );
+      const [textures, tileSheet] = await Promise.all([
+        loadXmlAtlas(
+          `${ASSETS}spritesheet/ships_miscellaneous_sheet.png`,
+          `${ASSETS}spritesheet/ships_miscellaneous_sheet.xml`,
+        ),
+        loadImage(`${ASSETS}tilesheet/tiles_sheet.png`),
+      ]);
       if (disposed) return; // the cleanup already destroyed the app
 
-    container.appendChild(app.canvas);
+      container.appendChild(app.canvas);
       const state = createGameState();
-      const renderer = new Renderer(app, textures, state);
+      const renderer = new Renderer(app, textures, tileSheet, state);
 
       input.attachKeyboard();
       loop = new GameLoop({

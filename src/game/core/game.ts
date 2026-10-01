@@ -1,6 +1,12 @@
 import { gameConfig } from '../config/gameConfig';
-import type { GameInput } from '../input/gameInput';
+import type { Action, GameInput } from '../input/gameInput';
 import { circlesOverlap, pushOutOfCircle, type Circle } from './geometry';
+
+const SHOTS: readonly { action: Action; angleOffset: number }[] = [
+  { action: 'fireFront', angleOffset: 0 },
+  { action: 'fireLeft', angleOffset: -Math.PI / 2 },
+  { action: 'fireRight', angleOffset: Math.PI / 2 },
+];
 
 export interface ProjectileState {
   x: number;
@@ -64,9 +70,15 @@ export function updateGame(state: GameState, dt: number, input: GameInput): void
   player.y = clamp(player.y, config.radius, arena.height - config.radius);
 
     player.fireCooldown = Math.max(0, player.fireCooldown - dt);
-  if (input.isDown('fireFront') && player.fireCooldown === 0) {
-    state.projectiles.push(createProjectile(player.x, player.y, player.angle));
-    player.fireCooldown = config.fireCooldownMs / 1000;
+  if (player.fireCooldown === 0) {
+    const shot = SHOTS.find((s) => input.isDown(s.action));
+    if (shot) {
+      const angle = player.angle + shot.angleOffset;
+      const startX = player.x + Math.cos(angle) * config.radius;
+      const startY = player.y + Math.sin(angle) * config.radius;
+      state.projectiles.push(createProjectile(startX, startY, angle));
+      player.fireCooldown = config.fireCooldownMs / 1000;
+    }
   }
 
   updateProjectiles(state, dt);

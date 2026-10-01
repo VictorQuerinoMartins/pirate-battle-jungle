@@ -149,5 +149,31 @@ describe("updateGame", () => {
     updateGame(state, 0.1, input);
 
     expect(state.projectiles).toHaveLength(0);
+
+    it("fires to the left and to the right with a broadside", () => {
+      const left = createGameState();
+      const leftInput = new GameInput();
+      leftInput.press("fireLeft");
+      updateGame(left, 0.01, leftInput);
+
+      const right = createGameState();
+      const rightInput = new GameInput();
+      rightInput.press("fireRight");
+      updateGame(right, 0.01, rightInput);
+
+      expect(left.projectiles[0].vx).toBeLessThan(0); // the ship faces up, so left is west
+      expect(right.projectiles[0].vx).toBeGreaterThan(0);
+    });
+
+    it("starts the shot at the edge of the ship", () => {
+      const state = createGameState();
+      const input = new GameInput();
+      input.press("fireFront");
+
+      updateGame(state, 0.01, input);
+
+      const shot = state.projectiles[0];
+      expect(state.player.y - shot.y).toBeGreaterThan(radius - 1);
+    });
   });
 });

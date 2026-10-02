@@ -7,11 +7,16 @@ import { GameInput } from "../../game/input/gameInput";
 import { Renderer } from "../../game/render/renderer";
 import { loadImage, loadXmlAtlas } from "../../game/render/atlas";
 import { Hud, type HudData } from "../components/Hud";
-import { PauseMenu } from '../components/PauseMenu';
+import { PauseMenu } from "../components/PauseMenu";
+import type { MatchResult } from "../matchResult";
 
 const ASSETS = `${import.meta.env.BASE_URL}assets/`;
 
-export function GameScreen() {
+export function GameScreen({
+  onFinish,
+}: {
+  onFinish: (result: MatchResult) => void;
+}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [hud, setHud] = useState<HudData>({
     hp: gameConfig.player.maxHp,
@@ -60,9 +65,9 @@ export function GameScreen() {
       app.canvas.style.width = "100%";
       app.canvas.style.height = "100%";
       app.canvas.style.objectFit = "contain";
-      const state = createGameState();
+      const state = createGameState(Date.now());
       const renderer = new Renderer(app, textures, tileSheet, state);
-
+      let finished = false;
       input.attachKeyboard();
       loop = new GameLoop({
         update: (dt) => {
@@ -81,8 +86,14 @@ export function GameScreen() {
               ? current
               : next,
           );
+
+          if (state.status === "over" && !finished) {
+            finished = true;
+            onFinish({ score: state.score });
+          }
         },
       });
+
       loop.start();
       loopRef.current = loop;
     }
@@ -97,7 +108,7 @@ export function GameScreen() {
       input.detachKeyboard();
       if (initialized) app.destroy(true, { children: true });
     };
-  }, []);
+  }, [onFinish]);
 
   // Pause or resume the game loop whenever `paused` changes.
   useEffect(() => {

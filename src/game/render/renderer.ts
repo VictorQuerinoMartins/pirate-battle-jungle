@@ -1,14 +1,15 @@
 import { Container, Graphics, Sprite, TilingSprite } from "pixi.js";
 import type { Application, Texture } from "pixi.js";
 import { gameConfig } from "../config/gameConfig";
-import type { GameEvent, GameState } from "../core/game";
+import type { GameEvent, GameState, ProjectileState } from "../core/game";
 import { gridTile, sheetRegion } from "./atlas";
-import { blobPoints } from "./islandShape";
 import type { TextureMap } from "./atlas";
-import { damageLevelFor, shipFrameName } from "./shipSprites";
-import type { DamageLevel, ShipColor } from "./shipSprites";
 import { createRandom, makeDebris } from "./debris";
 import type { DebrisPiece, DebrisSize } from "./debris";
+import { blobPoints } from "./islandShape";
+import { damageLevelFor, shipFrameName } from "./shipSprites";
+import type { DamageLevel, ShipColor } from "./shipSprites";
+import { trailSegments } from "./trail";
 
 const SHIP_SCALE = 0.65;
 const SPRITE_ROTATION_OFFSET = -Math.PI / 2;
@@ -16,17 +17,19 @@ const SPRITE_ROTATION_OFFSET = -Math.PI / 2;
 const WATER_TILE = 73;
 const WAVE_ALPHA = 0.22;
 
+// Island look. SAND_TILE is a seamless sand tile of tiles_sheet.png (64 px).
 const SAND_TILE = 68;
 const SAND_EDGE_COLOR = 0xdba66b;
 const GRASS_COLOR = 0x86b036;
 const GRASS_EDGE_COLOR = 0x6f9a2c;
-const GRASS_RATIO = 0.66;
+const GRASS_RATIO = 0.66; // grass radius / island radius
 const SHALLOW_COLOR = 0xb8efff;
 const SHALLOW_BANDS = [
   { extra: 46, alpha: 0.18 },
   { extra: 22, alpha: 0.3 },
 ] as const;
 
+// Regions of tiles_sheet.png (64 px tiles): three plants.
 const PLANT_SIZE = 64;
 const PLANT_INSET = 1;
 const PLANT_ARTS = [
@@ -39,9 +42,37 @@ const PLANT_SPOTS = [
   { dx: 0.3, dy: 0.2, plant: 2 },
   { dx: 0.05, dy: 0.3, plant: 0 },
 ] as const;
+
+// Rocks (plain and mossy) 
+const DECOR_BY_ISLAND = [
+  [
+    { angle: 3.6, dist: 0.84, tile: 66, scale: 0.5 },
+    { angle: 0.9, dist: 0.35, tile: 87, scale: 1 },
+    { angle: 2.2, dist: 0.45, tile: 88, scale: 1 },
+  ],
+  [
+    { angle: 5.0, dist: 0.85, tile: 50, scale: 0.6 },
+    { angle: 5.5, dist: 0.83, tile: 49, scale: 0.4 },
+    { angle: 1.0, dist: 0.35, tile: 87, scale: 1 },
+    { angle: 2.6, dist: 0.42, tile: 88, scale: 1 },
+    { angle: 4.1, dist: 0.3, tile: 87, scale: 1 },
+  ],
+  [
+    { angle: 1.0, dist: 0.35, tile: 88, scale: 1 },
+    { angle: 3.6, dist: 0.4, tile: 87, scale: 1 },
+    { angle: 5.8, dist: 0.3, tile: 88, scale: 1 },
+  ],
+] as const;
+const TILES_PER_ROW = 16;
+const TILE_SIZE = 64;
+
 const PROJECTILE_RADIUS = 4;
 const PROJECTILE_COLOR = 0x2b2b2b;
 const ENEMY_PROJECTILE_COLOR = 0xd9381e;
+const PLAYER_TRAIL_COLOR = 0xffffff;
+const ENEMY_TRAIL_COLOR = 0xffb199;
+const TRAIL_ALPHA = 0.6;
+
 const HEALTH_BAR_WIDTH = 52;
 const HEALTH_BAR_HEIGHT = 6;
 const HEALTH_BAR_OFFSET = 44;
@@ -103,8 +134,7 @@ export class Renderer {
     this.app = app;
     this.textures = textures;
 
-    // Layer 1: the sea. A second, larger and fainter copy of the same tile
-    // drifts the other way, so the water looks alive.
+    // Layer 1: the sea
     const { width, height } = gameConfig.arena;
     const waterTexture = gridTile(tileSheet, WATER_TILE);
     this.water = new TilingSprite({ texture: waterTexture, width, height });
@@ -112,9 +142,8 @@ export class Renderer {
     this.waves.tileScale.set(1.6);
     this.waves.alpha = WAVE_ALPHA;
 
-    // Layer 2: the islands, built in layers and drawn inside the same circle
-    // used for collision: shallow water (the sandbank), sand (a seamless tile
-    // cut by the outline), the beach edge, grass and plants.
+    // Layer 2: the islands, built in layers....
+
     const islands = new Container();
     const sandTexture = gridTile(tileSheet, SAND_TILE);
 
@@ -127,6 +156,23 @@ export class Renderer {
         PLANT_SIZE - 2 * PLANT_INSET,
       ),
     );
+
+    const decorTextures = new Map<number, Texture>();
+    const decorTexture = (tile: number): Texture => {
+      let texture = decorTextures.get(tile);
+      if (!texture) {
+        const index = tile - 1;
+        texture = sheetRegion(
+          tileSheet,
+          (index % TILES_PER_ROW) * TILE_SIZE + 1,
+          Math.floor(index / TILES_PER_ROW) * TILE_SIZE + 1,
+          TILE_SIZE - 2,
+          TILE_SIZE - 2,
+        );
+        decorTextures.set(tile, texture);
+      }
+      return texture;
+    };
 
     state.islands.forEach((island, index) => {
       const phase = index * 2.1;
@@ -171,6 +217,20 @@ export class Renderer {
         plant.scale.set(island.radius / 110);
         islands.addChild(plant);
       }
+
+      const decorList = DECOR_BY_ISLAND[index % DECOR_BY_ISLAND.length];
+      for (const spot of decorList) {
+        const angle = spot.angle + phase;
+        const decor = new Sprite(decorTexture(spot.tile));
+        decor.anchor.set(0.5);
+        decor.position.set(
+          island.x + Math.cos(angle) * spot.dist * island.radius,
+          island.y + Math.sin(angle) * spot.dist * island.radius,
+        );
+        decor.scale.set((spot.scale * island.radius) / 110);
+        decor.rotation = spot.angle * 3;
+        islands.addChild(decor);
+      }
     });
 
     // Layer 3: the player ship.
@@ -195,7 +255,6 @@ export class Renderer {
   render(state: GameState, dt = 0): void {
     const { player } = state;
 
-    // The sea drifts with the game time, so it freezes with the pause.
     this.waterTime += dt;
     this.water.tilePosition.set(this.waterTime * 8, this.waterTime * 3);
     this.waves.tilePosition.set(this.waterTime * -5, this.waterTime * 6);
@@ -207,19 +266,22 @@ export class Renderer {
     }
 
     this.playerSprite.position.set(player.x, player.y);
-
     this.playerSprite.rotation = player.angle + SPRITE_ROTATION_OFFSET;
+
     this.projectileGraphics.clear();
     for (const projectile of state.projectiles) {
+      this.drawTrail(projectile, PLAYER_TRAIL_COLOR);
       this.projectileGraphics
         .circle(projectile.x, projectile.y, PROJECTILE_RADIUS)
         .fill(PROJECTILE_COLOR);
     }
     for (const projectile of state.enemyProjectiles) {
+      this.drawTrail(projectile, ENEMY_TRAIL_COLOR);
       this.projectileGraphics
         .circle(projectile.x, projectile.y, PROJECTILE_RADIUS)
         .fill(ENEMY_PROJECTILE_COLOR);
     }
+
     this.drawEnemies(state);
     this.spawnEffects(state.events);
     this.updateEffects(dt);
@@ -236,6 +298,26 @@ export class Renderer {
       );
     }
     this.app.render();
+  }
+
+  // The tail of a shot: segments behind it, thinner and fainter toward the end.
+  private drawTrail(projectile: ProjectileState, color: number): void {
+    for (const segment of trailSegments(
+      projectile.x,
+      projectile.y,
+      projectile.vx,
+      projectile.vy,
+    )) {
+      this.projectileGraphics
+        .moveTo(segment.x1, segment.y1)
+        .lineTo(segment.x2, segment.y2)
+        .stroke({
+          width: segment.width,
+          color,
+          alpha: segment.alpha * TRAIL_ALPHA,
+          cap: "round",
+        });
+    }
   }
 
   private drawEnemies(state: GameState): void {

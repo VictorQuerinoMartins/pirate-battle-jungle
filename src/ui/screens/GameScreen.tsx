@@ -25,6 +25,7 @@ declare global {
 
 const ASSETS = `${import.meta.env.BASE_URL}assets/`;
 const LOAD_STEPS = 3; // renderer started, ship atlas, tile sheet
+const DEATH_DELAY_MS = 900; // the explosion plays before the result screen
 
 export function GameScreen({
   options,
@@ -80,6 +81,7 @@ export function GameScreen({
     let loop: GameLoop | null = null;
     let initialized = false;
     let disposed = false;
+    let finishTimer: number | undefined;
 
     // Each finished download moves the progress bar one step.
     function step<T>(value: T): T {
@@ -143,7 +145,7 @@ export function GameScreen({
 
           if (state.status === "over" && !finished) {
             finished = true;
-            onFinish({
+            const result: MatchResult = {
               matchId,
               playedAt: new Date().toISOString(),
               config: options,
@@ -152,10 +154,19 @@ export function GameScreen({
                 options.durationSeconds - state.timeLeft,
               ),
               reason: state.player.hp === 0 ? "destroyed" : "time",
-            });
+            };
+            if (result.reason === "destroyed") {
+              // let the explosion play before the result screen
+              finishTimer = window.setTimeout(
+                () => onFinish(result),
+                DEATH_DELAY_MS,
+              );
+            } else {
+              onFinish(result);
+            }
           }
         },
-        render: () => renderer.render(state),
+        render: (dt) => renderer.render(state, dt),
       });
 
       loop.start();
@@ -182,6 +193,7 @@ export function GameScreen({
     });
 
     return () => {
+      window.clearTimeout(finishTimer);
       delete window.__pirateBattle;
       disposed = true;
       loop?.stop();

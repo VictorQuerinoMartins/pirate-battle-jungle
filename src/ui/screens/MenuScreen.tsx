@@ -3,6 +3,7 @@ import type { GameOptions } from "../../game/core/options";
 import { loadPlayerId } from "../../storage/playerId";
 import { HistoryPanel } from "../components/HistoryPanel";
 import { RankingPanel } from "../components/RankingPanel";
+import { ControlsHelp } from "../components/ControlsHelp";
 
 interface MenuScreenProps {
   options: GameOptions;
@@ -39,7 +40,13 @@ export function MenuScreen({ options, onPlay, onOptions }: MenuScreenProps) {
         Options
       </button>
 
-      <div role="tablist" aria-label="Scores" style={{ display: "flex", gap: 8 }}>
+      <ControlsHelp />
+
+      <div
+        role="tablist"
+        aria-label="Scores"
+        style={{ display: "flex", gap: 8 }}
+      >
         <button
           type="button"
           role="tab"

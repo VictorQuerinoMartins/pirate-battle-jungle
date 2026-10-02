@@ -1,8 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
+import { sound } from "../../audio/sound";
 import { SpriteButton } from "./SpriteButton";
 
 export function PauseMenu({ onResume }: { onResume: () => void }) {
   const resumeRef = useRef<HTMLButtonElement>(null);
+  const muted = useSyncExternalStore(sound.subscribe, sound.isMuted);
 
   useEffect(() => {
     resumeRef.current?.focus();
@@ -21,6 +23,13 @@ export function PauseMenu({ onResume }: { onResume: () => void }) {
         </h2>
         <SpriteButton ref={resumeRef} onClick={onResume}>
           Resume
+        </SpriteButton>
+        <SpriteButton
+          variant="secondary"
+          aria-pressed={!muted}
+          onClick={() => sound.setMuted(!muted)}
+        >
+          {muted ? "Sound: Off" : "Sound: On"}
         </SpriteButton>
       </div>
     </div>

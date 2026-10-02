@@ -13,6 +13,8 @@ import type { GameOptions } from "../../game/core/options";
 import { TouchControls } from "../components/TouchControls";
 import { useMediaQuery } from "../useMediaQuery";
 import { seedFromSearch } from "../../game/seed";
+import { sound } from "../../audio/sound";
+import { soundsForUpdate } from "../../audio/soundMap";
 
 declare global {
   interface Window {
@@ -128,7 +130,23 @@ export function GameScreen({
       input.attachKeyboard();
       loop = new GameLoop({
         update: (dt) => {
+          const before = {
+            score: state.score,
+            hp: state.player.hp,
+            secondsLeft: Math.ceil(state.timeLeft),
+          };
           updateGame(state, dt, input);
+          for (const name of soundsForUpdate(
+            before,
+            {
+              score: state.score,
+              hp: state.player.hp,
+              secondsLeft: Math.ceil(state.timeLeft),
+            },
+            state.events,
+          )) {
+            sound.play(name);
+          }
 
           const next = {
             hp: state.player.hp,
@@ -157,11 +175,12 @@ export function GameScreen({
             };
             if (result.reason === "destroyed") {
               // let the explosion play before the result screen
-              finishTimer = window.setTimeout(
-                () => onFinish(result),
-                DEATH_DELAY_MS,
-              );
+              finishTimer = window.setTimeout(() => {
+                sound.play("over");
+                onFinish(result);
+              }, DEATH_DELAY_MS);
             } else {
+              sound.play("complete");
               onFinish(result);
             }
           }
@@ -171,10 +190,13 @@ export function GameScreen({
 
       loop.start();
       loopRef.current = loop;
+      sound.play("start");
+      sound.setAmbience(true);
+
       if (new URLSearchParams(window.location.search).has("testControls")) {
         const running = loop;
         window.__pirateBattle = {
-          advance: (seconds) => running.advance(seconds),
+          advance: (seconds) => sound.silently(() => running.advance(seconds)),
           stats: () => ({
             running: state.status !== "over",
             entities:
@@ -194,6 +216,7 @@ export function GameScreen({
 
     return () => {
       window.clearTimeout(finishTimer);
+      sound.setAmbience(false);
       delete window.__pirateBattle;
       disposed = true;
       loop?.stop();
@@ -208,10 +231,20 @@ export function GameScreen({
   // the pause is applied after resuming.
   const effectivePaused = paused || needsLandscape;
 
+  const wasPaused = useRef(false);
+
   useEffect(() => {
     loopRef.current?.setPaused(effectivePaused);
     inputRef.current?.setEnabled(!effectivePaused);
+
+    if (wasPaused.current !== effectivePaused) {
+      wasPaused.current = effectivePaused;
+      sound.play(effectivePaused ? "pause" : "resume");
+    }
+    // the sea only plays while a match is running (the loop exists)
+    if (loopRef.current) sound.setAmbience(!effectivePaused);
   }, [effectivePaused]);
+
   // Esc / P toggle the pause; losing focus pauses automatically.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

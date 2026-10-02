@@ -1,6 +1,17 @@
+import { useEffect, useRef } from "react";
+
 export function PauseMenu({ onResume }: { onResume: () => void }) {
+  const resumeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    resumeRef.current?.focus();
+  }, []);
+
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pause-title"
       style={{
         position: "absolute",
         inset: 0,
@@ -13,8 +24,11 @@ export function PauseMenu({ onResume }: { onResume: () => void }) {
         color: "#fff",
       }}
     >
-      <h2 style={{ margin: 0, fontSize: 36 }}>Paused</h2>
+      <h2 id="pause-title" style={{ margin: 0, fontSize: 36 }}>
+        Paused
+      </h2>
       <button
+        ref={resumeRef}
         type="button"
         onClick={onResume}
         style={{ padding: "10px 28px", fontSize: 18, cursor: "pointer" }}

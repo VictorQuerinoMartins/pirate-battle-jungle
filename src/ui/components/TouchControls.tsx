@@ -47,18 +47,18 @@ export function TouchControls({
   onRelease,
   onPause,
 }: TouchControlsProps) {
-  const group = {
+    const group = {
     position: "absolute",
-    bottom: 16,
+    bottom: 20,
     display: "flex",
-    gap: 12,
+    gap: 14,
     alignItems: "center",
   } as const;
   const handlers = { onPress, onRelease };
 
   return (
     <>
-      <div style={{ ...group, left: 16 }}>
+      <div style={{ ...group, left: 20 }}>
         <TouchButton
           action="rotateLeft"
           label="Turn left"
@@ -72,7 +72,7 @@ export function TouchControls({
           {...handlers}
         />
       </div>
-      <div style={{ ...group, right: 16 }}>
+      <div style={{ ...group, right: 20 }}>
         <TouchButton
           action="fireLeft"
           label="Fire left broadside"

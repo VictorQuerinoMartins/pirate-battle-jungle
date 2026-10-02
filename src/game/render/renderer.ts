@@ -7,6 +7,8 @@ import { blobPoints } from "./islandShape";
 import type { TextureMap } from "./atlas";
 import { damageLevelFor, shipFrameName } from "./shipSprites";
 import type { DamageLevel, ShipColor } from "./shipSprites";
+import { createRandom, makeDebris } from "./debris";
+import type { DebrisPiece, DebrisSize } from "./debris";
 
 const SHIP_SCALE = 0.65;
 const SPRITE_ROTATION_OFFSET = -Math.PI / 2;
@@ -53,6 +55,8 @@ const EXPLOSION_FRAMES = [
 ] as const;
 const SPARK_FRAMES = ["explosion_3.png"] as const;
 const MAX_EFFECTS = 60;
+const MAX_DEBRIS = 80;
+const DEBRIS_DRAG = 2.2; // how fast the pieces slow down
 
 interface Effect {
   sprite: Sprite;
@@ -61,6 +65,15 @@ interface Effect {
   frames: readonly string[];
   fromScale: number;
   toScale: number;
+}
+
+interface Debris {
+  sprite: Sprite;
+  piece: DebrisPiece;
+  age: number;
+  vx: number;
+  vy: number;
+  spin: number;
 }
 
 export class Renderer {
@@ -74,6 +87,9 @@ export class Renderer {
   private readonly healthGraphics = new Graphics();
   private readonly effectLayer = new Container();
   private effects: Effect[] = [];
+  private readonly debrisLayer = new Container();
+  private debris: Debris[] = [];
+  private readonly random = createRandom(2026);
   private readonly water: TilingSprite;
   private readonly waves: TilingSprite;
   private waterTime = 0;
@@ -169,6 +185,7 @@ export class Renderer {
       this.projectileGraphics,
       this.enemyLayer,
       this.playerSprite,
+      this.debrisLayer,
       this.effectLayer,
       this.healthGraphics,
     );
@@ -206,6 +223,7 @@ export class Renderer {
     this.drawEnemies(state);
     this.spawnEffects(state.events);
     this.updateEffects(dt);
+    this.updateDebris(dt);
 
     this.healthGraphics.clear();
     this.drawHealthBar(player.x, player.y, player.hp, gameConfig.player.maxHp);
@@ -286,6 +304,7 @@ export class Renderer {
           } else {
             this.addEffect(event.x, event.y, EXPLOSION_FRAMES, 0.5, 0.5, 1);
           }
+          this.addDebris(event.x, event.y, event.size);
           break;
       }
     }
@@ -330,6 +349,48 @@ export class Renderer {
     this.effects = this.effects.filter((effect) => {
       if (effect.age < effect.life) return true;
       effect.sprite.destroy();
+      return false;
+    });
+  }
+
+  private addDebris(x: number, y: number, size: DebrisSize): void {
+    for (const piece of makeDebris(size, this.random)) {
+      if (this.debris.length >= MAX_DEBRIS) return;
+      const sprite = new Sprite(this.effectTexture(piece.frame));
+      sprite.anchor.set(0.5);
+      sprite.position.set(x, y);
+      sprite.scale.set(piece.scale);
+      sprite.rotation = this.random() * Math.PI * 2;
+      this.debrisLayer.addChild(sprite);
+      this.debris.push({
+        sprite,
+        piece,
+        age: 0,
+        vx: Math.cos(piece.angle) * piece.speed,
+        vy: Math.sin(piece.angle) * piece.speed,
+        spin: piece.spin,
+      });
+    }
+  }
+
+  // Pieces fly out, slow down, spin less and less, then fade away.
+  private updateDebris(dt: number): void {
+    const drag = Math.exp(-DEBRIS_DRAG * dt);
+    for (const item of this.debris) {
+      item.age += dt;
+      item.vx *= drag;
+      item.vy *= drag;
+      item.spin *= drag;
+      item.sprite.x += item.vx * dt;
+      item.sprite.y += item.vy * dt;
+      item.sprite.rotation += item.spin * dt;
+      const progress = item.age / item.piece.life;
+      item.sprite.alpha =
+        progress < 0.5 ? 1 : Math.max(0, 1 - (progress - 0.5) / 0.5);
+    }
+    this.debris = this.debris.filter((item) => {
+      if (item.age < item.piece.life) return true;
+      item.sprite.destroy();
       return false;
     });
   }

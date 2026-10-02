@@ -3,13 +3,15 @@ import { Application } from "pixi.js";
 import { gameConfig } from "../../game/config/gameConfig";
 import { createGameState, updateGame } from "../../game/core/game";
 import { GameLoop } from "../../game/core/gameLoop";
-import { GameInput } from "../../game/input/gameInput";
+import { GameInput, type Action } from "../../game/input/gameInput";
 import { Renderer } from "../../game/render/renderer";
 import { loadImage, loadXmlAtlas } from "../../game/render/atlas";
 import { Hud, type HudData } from "../components/Hud";
 import { PauseMenu } from "../components/PauseMenu";
 import type { MatchResult } from "../matchResult";
 import type { GameOptions } from "../../game/core/options";
+import { TouchControls } from "../components/TouchControls";
+import { useMediaQuery } from "../useMediaQuery";
 
 const ASSETS = `${import.meta.env.BASE_URL}assets/`;
 const LOAD_STEPS = 3; // renderer started, ship atlas, tile sheet
@@ -43,6 +45,18 @@ export function GameScreen({
     setLoaded(0);
     setLoadState("loading");
     setAttempt((count) => count + 1);
+  }
+
+  const isTouch = useMediaQuery("(pointer: coarse)");
+  const isPortrait = useMediaQuery("(orientation: portrait)");
+  const needsLandscape = isTouch && isPortrait;
+
+  function pressAction(action: Action) {
+    inputRef.current?.press(action);
+  }
+
+  function releaseAction(action: Action) {
+    inputRef.current?.release(action);
   }
 
   useEffect(() => {
@@ -150,14 +164,15 @@ export function GameScreen({
     };
   }, [onFinish, options, attempt]);
 
-  // Pause or resume the game loop whenever `paused` changes. While paused the
-  // input forgets held keys and ignores new ones, so nothing pressed during
+  // The game also waits while a touch device is held upright. While waiting,
+  // the input forgets held keys and ignores new ones, so nothing pressed during
   // the pause is applied after resuming.
-  useEffect(() => {
-    loopRef.current?.setPaused(paused);
-    inputRef.current?.setEnabled(!paused);
-  }, [paused]);
+  const effectivePaused = paused || needsLandscape;
 
+  useEffect(() => {
+    loopRef.current?.setPaused(effectivePaused);
+    inputRef.current?.setEnabled(!effectivePaused);
+  }, [effectivePaused]);
   // Esc / P toggle the pause; losing focus pauses automatically.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -182,7 +197,14 @@ export function GameScreen({
   }, []);
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100%",
+        touchAction: "none",
+      }}
+    >
       <div ref={hostRef} style={{ width: "100%", height: "100%" }} />
       {loadState === "ready" && <Hud data={hud} />}
       {loadState === "loading" && (
@@ -227,7 +249,36 @@ export function GameScreen({
           </button>
         </div>
       )}
-      {paused && <PauseMenu onResume={() => setPaused(false)} />}
+      {loadState === "ready" && isTouch && (
+        <TouchControls
+          onPress={pressAction}
+          onRelease={releaseAction}
+          onPause={() => setPaused(true)}
+        />
+      )}
+      {needsLandscape && (
+        <div
+          role="alert"
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "#102a43",
+            color: "#fff",
+            textAlign: "center",
+            padding: 24,
+          }}
+        >
+          <p style={{ margin: 0, fontSize: 20 }}>
+            Rotate your device to landscape to play.
+          </p>
+        </div>
+      )}
+      {paused && !needsLandscape && (
+        <PauseMenu onResume={() => setPaused(false)} />
+      )}
     </div>
   );
 }

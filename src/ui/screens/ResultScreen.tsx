@@ -40,7 +40,9 @@ export function ResultScreen({
 
       {saveStatus === "error" ? (
         <div role="alert">
-          <p style={{ margin: 0 }}>Could not save this match.</p>
+          <p style={{ margin: 0 }}>
+            Could not save this match. It is kept and will be sent again.
+          </p>
           <button type="button" onClick={onRetry}>
             Try again
           </button>

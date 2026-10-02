@@ -1,9 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { postMatch } from "./api/matchesApi";
 import { toMatchRecord } from "./api/matchRecord";
 import type { GameOptions } from "./game/core/options";
 import { loadOptions, saveOptions } from "./storage/optionsStorage";
+import {
+  addPendingMatch,
+  loadPendingMatches,
+  removePendingMatch,
+} from "./storage/pendingMatches";
 import { loadPlayerId } from "./storage/playerId";
 import { GameScreen } from "./ui/screens/GameScreen";
 import { MenuScreen } from "./ui/screens/MenuScreen";
@@ -22,11 +27,11 @@ export default function App() {
   const [options, setOptions] = useState<GameOptions>(() => loadOptions());
   const queryClient = useQueryClient();
 
-  // Registers the finished match, then refreshes ranking and history.
   const { mutate, status, variables } = useMutation({
     mutationFn: postMatch,
     retry: 2,
-    onSuccess: () => {
+    onSuccess: (_saved, record) => {
+      removePendingMatch(record.id);
       void queryClient.invalidateQueries({ queryKey: ["ranking"] });
       void queryClient.invalidateQueries({ queryKey: ["history"] });
     },
@@ -34,11 +39,22 @@ export default function App() {
 
   const handleFinish = useCallback(
     (result: MatchResult) => {
+      const record = toMatchRecord(result, loadPlayerId());
+      addPendingMatch(record);
       setScreen({ name: "result", result });
-      mutate(toMatchRecord(result, loadPlayerId()));
+      mutate(record);
     },
     [mutate],
   );
+
+  useEffect(() => {
+    function sendPending() {
+      for (const record of loadPendingMatches()) mutate(record);
+    }
+    sendPending();
+    window.addEventListener("online", sendPending);
+    return () => window.removeEventListener("online", sendPending);
+  }, [mutate]);
 
   function handleOptionsChange(next: GameOptions) {
     setOptions(next);

@@ -14,6 +14,14 @@ import { TouchControls } from "../components/TouchControls";
 import { useMediaQuery } from "../useMediaQuery";
 import { seedFromSearch } from "../../game/seed";
 
+declare global {
+  interface Window {
+    // Only set when the url has ?testControls: lets the end-to-end tests play
+    // the simulation without waiting for real time or drawing every frame.
+    __pirateBattle?: { advance: (seconds: number) => void };
+  }
+}
+
 const ASSETS = `${import.meta.env.BASE_URL}assets/`;
 const LOAD_STEPS = 3; // renderer started, ship atlas, tile sheet
 
@@ -118,7 +126,6 @@ export function GameScreen({
       loop = new GameLoop({
         update: (dt) => {
           updateGame(state, dt, input);
-          renderer.render(state);
 
           const next = {
             hp: state.player.hp,
@@ -147,10 +154,17 @@ export function GameScreen({
             });
           }
         },
+        render: () => renderer.render(state),
       });
 
       loop.start();
       loopRef.current = loop;
+      if (new URLSearchParams(window.location.search).has("testControls")) {
+        const running = loop;
+        window.__pirateBattle = {
+          advance: (seconds) => running.advance(seconds),
+        };
+      }
       setLoadState("ready");
     }
 
@@ -160,6 +174,7 @@ export function GameScreen({
     });
 
     return () => {
+      delete window.__pirateBattle;
       disposed = true;
       loop?.stop();
       input.detachKeyboard();

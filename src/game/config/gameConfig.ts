@@ -55,5 +55,5 @@ export const gameConfig: GameConfig = {
   projectile: { speed: 500, damage: 10, lifetimeMs: 1500 },
   chaser: { maxHp: 30, speed: 110, contactDamage: 10, radius: 20 },
   shooter: { maxHp: 20, speed: 80, fireCooldownMs: 1500 },
-  spawn: { intervalMs: 2000, maxEnemies: 8 },
+   spawn: { intervalMs: 3000, maxEnemies: 8 },
 };

@@ -2,6 +2,7 @@ import { gameConfig } from "../config/gameConfig";
 import type { Action, GameInput } from "../input/gameInput";
 import { circlesOverlap, pushOutOfCircle, type Circle } from "./geometry";
 import { createRng } from "./rng";
+import { defaultOptions, type GameOptions } from "./options";
 
 const SHOTS: readonly { action: Action; angleOffset: number }[] = [
   { action: "fireFront", angleOffset: 0 },
@@ -40,13 +41,17 @@ export interface GameState {
   projectiles: ProjectileState[];
   enemies: EnemyState[];
   spawnTimer: number;
+  spawnInterval: number;
   random: () => number;
   score: number;
   timeLeft: number;
   status: GameStatus;
 }
 
-export function createGameState(seed = 1): GameState {
+export function createGameState(
+  seed = 1,
+  options: GameOptions = defaultOptions,
+): GameState {
   const { arena, player } = gameConfig;
   return {
     player: {
@@ -56,13 +61,14 @@ export function createGameState(seed = 1): GameState {
       hp: player.maxHp,
       fireCooldown: 0,
     },
-        islands: arena.islands,
+    islands: arena.islands,
     projectiles: [],
     enemies: [],
     spawnTimer: 0,
+    spawnInterval: options.spawnIntervalSeconds,
     random: createRng(seed),
     score: 0,
-    timeLeft: gameConfig.match.durationSeconds,
+    timeLeft: options.durationSeconds,
     status: "playing",
   };
 }
@@ -72,7 +78,7 @@ export function updateGame(
   dt: number,
   input: GameInput,
 ): void {
-  if (state.status !== "playing") return; 
+  if (state.status !== "playing") return;
   const { arena, player: config } = gameConfig;
   const player = state.player;
 
@@ -209,7 +215,7 @@ function updateEnemies(state: GameState, dt: number): void {
   const player = state.player;
 
   state.spawnTimer += dt;
-  if (state.spawnTimer >= spawn.intervalMs / 1000) {
+  if (state.spawnTimer >= state.spawnInterval) {
     state.spawnTimer = 0;
     if (state.enemies.length < spawn.maxEnemies) {
       state.enemies.push(createChaser(state));

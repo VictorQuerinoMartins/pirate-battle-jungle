@@ -12,6 +12,7 @@ import type { MatchResult } from "../matchResult";
 import type { GameOptions } from "../../game/core/options";
 import { TouchControls } from "../components/TouchControls";
 import { useMediaQuery } from "../useMediaQuery";
+import { seedFromSearch } from "../../game/seed";
 
 const ASSETS = `${import.meta.env.BASE_URL}assets/`;
 const LOAD_STEPS = 3; // renderer started, ship atlas, tile sheet
@@ -106,7 +107,10 @@ export function GameScreen({
       app.canvas.style.width = "100%";
       app.canvas.style.height = "100%";
       app.canvas.style.objectFit = "contain";
-      const state = createGameState(Date.now(), options);
+      const state = createGameState(
+        seedFromSearch(window.location.search) ?? Date.now(),
+        options,
+      );
       const matchId = crypto.randomUUID();
       const renderer = new Renderer(app, textures, tileSheet, state);
       let finished = false;

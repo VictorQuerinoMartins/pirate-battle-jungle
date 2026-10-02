@@ -92,7 +92,13 @@ export function GameScreen({
 
           if (state.status === "over" && !finished) {
             finished = true;
-            onFinish({ score: state.score });
+            onFinish({
+              score: state.score,
+              secondsPlayed: Math.round(
+                options.durationSeconds - state.timeLeft,
+              ),
+              reason: state.player.hp === 0 ? "destroyed" : "time",
+            });
           }
         },
       });

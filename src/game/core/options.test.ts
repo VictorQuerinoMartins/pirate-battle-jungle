@@ -13,13 +13,19 @@ describe("sanitizeOptions", () => {
   });
 
   it("clamps values outside the limits", () => {
-    const result = sanitizeOptions({ durationSeconds: 9999, spawnIntervalSeconds: 0 });
-    expect(result.durationSeconds).toBe(300);
+    const result = sanitizeOptions({
+      durationSeconds: 9999,
+      spawnIntervalSeconds: 0,
+    });
+    expect(result.durationSeconds).toBe(180);
     expect(result.spawnIntervalSeconds).toBe(1);
   });
 
   it("replaces invalid values with the defaults", () => {
-    const result = sanitizeOptions({ durationSeconds: "fast", spawnIntervalSeconds: NaN });
+    const result = sanitizeOptions({
+      durationSeconds: "fast",
+      spawnIntervalSeconds: NaN,
+    });
     expect(result).toEqual(defaultOptions);
   });
 });

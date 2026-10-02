@@ -12,7 +12,7 @@ export const defaultOptions: GameOptions = {
 
 // Limits used by the Options screen and to validate stored values.
 export const optionLimits = {
-  durationSeconds: { min: 30, max: 300, step: 30 },
+  durationSeconds: { min: 60, max: 180, step: 10 },
   spawnIntervalSeconds: { min: 1, max: 10, step: 1 },
 } as const;
 

@@ -1,4 +1,7 @@
+import { useState } from "react";
 import type { GameOptions } from "../../game/core/options";
+import { loadPlayerId } from "../../storage/playerId";
+import { HistoryPanel } from "../components/HistoryPanel";
 import { RankingPanel } from "../components/RankingPanel";
 
 interface MenuScreenProps {
@@ -7,7 +10,11 @@ interface MenuScreenProps {
   onOptions: () => void;
 }
 
+type Tab = "ranking" | "history";
+
 export function MenuScreen({ options, onPlay, onOptions }: MenuScreenProps) {
+  const [tab, setTab] = useState<Tab>("ranking");
+  const [playerId] = useState(() => loadPlayerId());
   const buttonStyle = { padding: "10px 28px", fontSize: 18, cursor: "pointer" };
 
   return (
@@ -31,7 +38,32 @@ export function MenuScreen({ options, onPlay, onOptions }: MenuScreenProps) {
       <button type="button" onClick={onOptions} style={buttonStyle}>
         Options
       </button>
-      <RankingPanel options={options} />
+
+      <div role="tablist" aria-label="Scores" style={{ display: "flex", gap: 8 }}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "ranking"}
+          onClick={() => setTab("ranking")}
+        >
+          Ranking
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "history"}
+          onClick={() => setTab("history")}
+        >
+          Match History
+        </button>
+      </div>
+      <div role="tabpanel">
+        {tab === "ranking" ? (
+          <RankingPanel options={options} />
+        ) : (
+          <HistoryPanel playerId={playerId} />
+        )}
+      </div>
     </div>
   );
 }

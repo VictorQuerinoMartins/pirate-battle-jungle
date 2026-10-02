@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRanking } from "../../api/queries";
 import type { GameOptions } from "../../game/core/options";
+import { Pagination } from "./Pagination";
 
 export function RankingPanel({ options }: { options: GameOptions }) {
   const [page, setPage] = useState(1);
@@ -43,25 +44,7 @@ export function RankingPanel({ options }: { options: GameOptions }) {
           ))}
         </tbody>
       </table>
-      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-        <button
-          type="button"
-          onClick={() => setPage(page - 1)}
-          disabled={page <= 1}
-        >
-          Previous
-        </button>
-        <span>
-          Page {page} of {lastPage}
-        </span>
-        <button
-          type="button"
-          onClick={() => setPage(page + 1)}
-          disabled={page >= lastPage}
-        >
-          Next
-        </button>
-      </div>
+      <Pagination page={page} lastPage={lastPage} onChange={setPage} />
     </section>
   );
 }

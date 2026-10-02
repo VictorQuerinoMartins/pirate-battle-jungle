@@ -2,7 +2,8 @@ import { Container, Graphics, Sprite, TilingSprite } from "pixi.js";
 import type { Application, Texture } from "pixi.js";
 import { gameConfig } from "../config/gameConfig";
 import type { GameEvent, GameState } from "../core/game";
-import { gridTile } from "./atlas";
+import { gridTile, sheetRegion } from "./atlas";
+import { blobPoints } from "./islandShape";
 import type { TextureMap } from "./atlas";
 import { damageLevelFor, shipFrameName } from "./shipSprites";
 import type { DamageLevel, ShipColor } from "./shipSprites";
@@ -11,10 +12,31 @@ const SHIP_SCALE = 0.5;
 const SPRITE_ROTATION_OFFSET = -Math.PI / 2;
 
 const WATER_TILE = 73;
-const SAND_COLOR = 0xf9d49d;
-const GRASS_COLOR = 0x89b738;
+const WAVE_ALPHA = 0.22;
+
+const SAND_TILE = 68;
+const SAND_EDGE_COLOR = 0xdba66b;
+const GRASS_COLOR = 0x86b036;
+const GRASS_EDGE_COLOR = 0x6f9a2c;
+const GRASS_RATIO = 0.66;
 const SHALLOW_COLOR = 0xb8efff;
-const SHALLOW_WIDTH = 14;
+const SHALLOW_BANDS = [
+  { extra: 46, alpha: 0.18 },
+  { extra: 22, alpha: 0.3 },
+] as const;
+
+const PLANT_SIZE = 64;
+const PLANT_INSET = 1;
+const PLANT_ARTS = [
+  { x: 320, y: 256 },
+  { x: 384, y: 256 },
+  { x: 448, y: 256 },
+] as const;
+const PLANT_SPOTS = [
+  { dx: -0.25, dy: -0.15, plant: 1 },
+  { dx: 0.3, dy: 0.2, plant: 2 },
+  { dx: 0.05, dy: 0.3, plant: 0 },
+] as const;
 const PROJECTILE_RADIUS = 4;
 const PROJECTILE_COLOR = 0x2b2b2b;
 const ENEMY_PROJECTILE_COLOR = 0xd9381e;
@@ -52,6 +74,9 @@ export class Renderer {
   private readonly healthGraphics = new Graphics();
   private readonly effectLayer = new Container();
   private effects: Effect[] = [];
+  private readonly water: TilingSprite;
+  private readonly waves: TilingSprite;
+  private waterTime = 0;
 
   constructor(
     app: Application,
@@ -62,22 +87,75 @@ export class Renderer {
     this.app = app;
     this.textures = textures;
 
-    // Layer 1: the sea, one tile repeated over the whole arena.
-    const water = new TilingSprite({
-      texture: gridTile(tileSheet, WATER_TILE),
-      width: gameConfig.arena.width,
-      height: gameConfig.arena.height,
-    });
+    // Layer 1: the sea. A second, larger and fainter copy of the same tile
+    // drifts the other way, so the water looks alive.
+    const { width, height } = gameConfig.arena;
+    const waterTexture = gridTile(tileSheet, WATER_TILE);
+    this.water = new TilingSprite({ texture: waterTexture, width, height });
+    this.waves = new TilingSprite({ texture: waterTexture, width, height });
+    this.waves.tileScale.set(1.6);
+    this.waves.alpha = WAVE_ALPHA;
 
-    // Layer 2: the islands, drawn with the same circles used for collision.
-    const islands = new Graphics();
-    for (const island of state.islands) {
-      islands
-        .circle(island.x, island.y, island.radius + SHALLOW_WIDTH)
-        .fill({ color: SHALLOW_COLOR, alpha: 0.4 });
-      islands.circle(island.x, island.y, island.radius).fill(SAND_COLOR);
-      islands.circle(island.x, island.y, island.radius * 0.7).fill(GRASS_COLOR);
-    }
+    // Layer 2: the islands, built in layers and drawn inside the same circle
+    // used for collision: shallow water (the sandbank), sand (a seamless tile
+    // cut by the outline), the beach edge, grass and plants.
+    const islands = new Container();
+    const sandTexture = gridTile(tileSheet, SAND_TILE);
+
+    const plantTextures = PLANT_ARTS.map((art) =>
+      sheetRegion(
+        tileSheet,
+        art.x + PLANT_INSET,
+        art.y + PLANT_INSET,
+        PLANT_SIZE - 2 * PLANT_INSET,
+        PLANT_SIZE - 2 * PLANT_INSET,
+      ),
+    );
+
+    state.islands.forEach((island, index) => {
+      const phase = index * 2.1;
+      const outline = (radius: number) =>
+        blobPoints(island.x, island.y, radius, phase);
+
+      const shallow = new Graphics();
+      for (const band of SHALLOW_BANDS) {
+        shallow
+          .poly(outline(island.radius + band.extra))
+          .fill({ color: SHALLOW_COLOR, alpha: band.alpha });
+      }
+
+      const sand = new TilingSprite({
+        texture: sandTexture,
+        width: island.radius * 2,
+        height: island.radius * 2,
+      });
+      sand.position.set(island.x - island.radius, island.y - island.radius);
+      const sandMask = new Graphics()
+        .poly(outline(island.radius))
+        .fill(0xffffff);
+      sand.mask = sandMask;
+
+      const beach = new Graphics()
+        .poly(outline(island.radius))
+        .stroke({ color: SAND_EDGE_COLOR, width: 4 });
+      const grass = new Graphics()
+        .poly(outline(island.radius * GRASS_RATIO))
+        .fill(GRASS_COLOR)
+        .stroke({ color: GRASS_EDGE_COLOR, width: 3 });
+
+      islands.addChild(shallow, sandMask, sand, beach, grass);
+
+      for (const spot of PLANT_SPOTS) {
+        const plant = new Sprite(plantTextures[spot.plant]);
+        plant.anchor.set(0.5);
+        plant.position.set(
+          island.x + spot.dx * island.radius,
+          island.y + spot.dy * island.radius,
+        );
+        plant.scale.set(island.radius / 110);
+        islands.addChild(plant);
+      }
+    });
 
     // Layer 3: the player ship.
     this.playerSprite = new Sprite(this.shipTexture("red", 0));
@@ -85,7 +163,8 @@ export class Renderer {
     this.playerSprite.scale.set(SHIP_SCALE);
 
     app.stage.addChild(
-      water,
+      this.water,
+      this.waves,
       islands,
       this.projectileGraphics,
       this.enemyLayer,
@@ -98,6 +177,11 @@ export class Renderer {
 
   render(state: GameState, dt = 0): void {
     const { player } = state;
+
+    // The sea drifts with the game time, so it freezes with the pause.
+    this.waterTime += dt;
+    this.water.tilePosition.set(this.waterTime * 8, this.waterTime * 3);
+    this.waves.tilePosition.set(this.waterTime * -5, this.waterTime * 6);
 
     const level = damageLevelFor(player.hp, gameConfig.player.maxHp);
     if (level !== this.playerLevel) {

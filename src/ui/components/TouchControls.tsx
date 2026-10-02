@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import type { Action } from "../../game/input/gameInput";
 
 interface TouchControlsProps {
@@ -10,38 +9,25 @@ interface TouchControlsProps {
 interface TouchButtonProps {
   action: Action;
   label: string;
+  icon: string;
   onPress: (action: Action) => void;
   onRelease: (action: Action) => void;
-  children: ReactNode;
 }
-
-const buttonStyle = {
-  width: 64,
-  height: 64,
-  borderRadius: "50%",
-  fontSize: 20,
-  border: "2px solid #fff",
-  background: "rgba(0, 0, 0, 0.45)",
-  color: "#fff",
-  touchAction: "none",
-  userSelect: "none",
-  WebkitUserSelect: "none",
-} as const;
 
 // One button = one action held while the finger is down. Each finger has its
 // own pointer, so turning and firing at the same time works.
 function TouchButton({
   action,
   label,
+  icon,
   onPress,
   onRelease,
-  children,
 }: TouchButtonProps) {
   return (
     <button
       type="button"
       aria-label={label}
-      style={buttonStyle}
+      className="btn-round touch-btn"
       onPointerDown={(event) => {
         event.currentTarget.setPointerCapture(event.pointerId);
         onPress(action);
@@ -51,7 +37,7 @@ function TouchButton({
       onLostPointerCapture={() => onRelease(action)}
       onContextMenu={(event) => event.preventDefault()}
     >
-      {children}
+      <span className={`sprite ${icon}`} aria-hidden="true" />
     </button>
   );
 }
@@ -73,42 +59,52 @@ export function TouchControls({
   return (
     <>
       <div style={{ ...group, left: 16 }}>
-        <TouchButton action="rotateLeft" label="Turn left" {...handlers}>
-          ◀
-        </TouchButton>
-        <TouchButton action="rotateRight" label="Turn right" {...handlers}>
-          ▶
-        </TouchButton>
+        <TouchButton
+          action="rotateLeft"
+          label="Turn left"
+          icon="f-icon-turn-left"
+          {...handlers}
+        />
+        <TouchButton
+          action="rotateRight"
+          label="Turn right"
+          icon="f-icon-turn-right"
+          {...handlers}
+        />
       </div>
       <div style={{ ...group, right: 16 }}>
         <TouchButton
           action="fireLeft"
           label="Fire left broadside"
+          icon="f-icon-fire-left"
           {...handlers}
-        >
-          L
-        </TouchButton>
-        <TouchButton action="fireFront" label="Fire front cannon" {...handlers}>
-          ●
-        </TouchButton>
+        />
+        <TouchButton
+          action="fireFront"
+          label="Fire front cannon"
+          icon="f-icon-fire-front"
+          {...handlers}
+        />
         <TouchButton
           action="fireRight"
           label="Fire right broadside"
+          icon="f-icon-fire-right"
           {...handlers}
-        >
-          R
-        </TouchButton>
-        <TouchButton action="forward" label="Sail forward" {...handlers}>
-          ▲
-        </TouchButton>
+        />
+        <TouchButton
+          action="forward"
+          label="Sail forward"
+          icon="f-icon-forward"
+          {...handlers}
+        />
       </div>
       <button
         type="button"
         aria-label="Pause"
+        className="btn-round touch-pause"
         onClick={onPause}
-        style={{ position: "absolute", top: 40, right: 8 }}
       >
-        Pause
+        <span className="sprite f-icon-pause" aria-hidden="true" />
       </button>
     </>
   );

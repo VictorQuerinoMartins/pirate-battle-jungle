@@ -4,6 +4,7 @@ import {
   type GameOptions,
 } from "../../game/core/options";
 import { formatTime } from "../formatTime";
+import { SpriteButton } from "../components/SpriteButton";
 
 interface OptionsScreenProps {
   options: GameOptions;
@@ -19,27 +20,25 @@ interface RowProps {
 }
 
 function Row({ label, value, onMinus, onPlus }: RowProps) {
-  const buttonStyle = { width: 40, height: 40, fontSize: 22, cursor: "pointer" };
-
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-      <span style={{ width: 160, textAlign: "left" }}>{label}</span>
+    <div className="option-row">
+      <span className="option-label">{label}</span>
       <button
         type="button"
+        className="btn-round"
         onClick={onMinus}
         aria-label={`Decrease ${label}`}
-        style={buttonStyle}
       >
-        -
+        <span className="sprite f-icon-minus" aria-hidden="true" />
       </button>
-      <span style={{ width: 70 }}>{value}</span>
+      <span className="option-value">{value}</span>
       <button
         type="button"
+        className="btn-round"
         onClick={onPlus}
         aria-label={`Increase ${label}`}
-        style={buttonStyle}
       >
-        +
+        <span className="sprite f-icon-plus" aria-hidden="true" />
       </button>
     </div>
   );
@@ -65,38 +64,25 @@ export function OptionsScreen({ options, onChange, onBack }: OptionsScreenProps)
     );
 
   return (
-    <div
-      style={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 20,
-        background: "#102a43",
-        color: "#fff",
-      }}
-    >
-      <h1 style={{ margin: 0 }}>Options</h1>
-      <Row
-        label="Session time"
-        value={formatTime(options.durationSeconds)}
-        onMinus={() => changeDuration(-durationSeconds.step)}
-        onPlus={() => changeDuration(durationSeconds.step)}
-      />
-      <Row
-        label="Enemy spawn"
-        value={`${options.spawnIntervalSeconds} s`}
-        onMinus={() => changeSpawn(-spawnIntervalSeconds.step)}
-        onPlus={() => changeSpawn(spawnIntervalSeconds.step)}
-      />
-      <button
-        type="button"
-        onClick={onBack}
-        style={{ padding: "10px 28px", fontSize: 18, cursor: "pointer" }}
-      >
-        Back
-      </button>
+    <div className="scene">
+      <div className="sprite f-panel card scale-lg">
+        <h1 className="card-title">Options</h1>
+        <Row
+          label="Session time"
+          value={formatTime(options.durationSeconds)}
+          onMinus={() => changeDuration(-durationSeconds.step)}
+          onPlus={() => changeDuration(durationSeconds.step)}
+        />
+        <Row
+          label="Enemy spawn"
+          value={`${options.spawnIntervalSeconds} s`}
+          onMinus={() => changeSpawn(-spawnIntervalSeconds.step)}
+          onPlus={() => changeSpawn(spawnIntervalSeconds.step)}
+        />
+        <SpriteButton variant="secondary" onClick={onBack}>
+          Back
+        </SpriteButton>
+      </div>
     </div>
   );
 }

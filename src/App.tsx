@@ -1,6 +1,10 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
+import { postMatch } from "./api/matchesApi";
+import { toMatchRecord } from "./api/matchRecord";
 import type { GameOptions } from "./game/core/options";
 import { loadOptions, saveOptions } from "./storage/optionsStorage";
+import { loadPlayerId } from "./storage/playerId";
 import { GameScreen } from "./ui/screens/GameScreen";
 import { MenuScreen } from "./ui/screens/MenuScreen";
 import { OptionsScreen } from "./ui/screens/OptionsScreen";
@@ -16,10 +20,25 @@ type Screen =
 export default function App() {
   const [screen, setScreen] = useState<Screen>({ name: "menu" });
   const [options, setOptions] = useState<GameOptions>(() => loadOptions());
+  const queryClient = useQueryClient();
 
-  const handleFinish = useCallback((result: MatchResult) => {
-    setScreen({ name: "result", result });
-  }, []);
+  // Registers the finished match, then refreshes ranking and history.
+  const { mutate, status, variables } = useMutation({
+    mutationFn: postMatch,
+    retry: 2,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["ranking"] });
+      void queryClient.invalidateQueries({ queryKey: ["history"] });
+    },
+  });
+
+  const handleFinish = useCallback(
+    (result: MatchResult) => {
+      setScreen({ name: "result", result });
+      mutate(toMatchRecord(result, loadPlayerId()));
+    },
+    [mutate],
+  );
 
   function handleOptionsChange(next: GameOptions) {
     setOptions(next);
@@ -41,15 +60,21 @@ export default function App() {
       return (
         <ResultScreen
           result={screen.result}
+          saveStatus={status}
+          onRetry={() => {
+            if (variables) mutate(variables);
+          }}
           onPlayAgain={() => setScreen({ name: "game" })}
           onMainMenu={() => setScreen({ name: "menu" })}
         />
       );
     case "menu":
-              <MenuScreen
+      return (
+        <MenuScreen
           options={options}
           onPlay={() => setScreen({ name: "game" })}
           onOptions={() => setScreen({ name: "options" })}
         />
+      );
   }
 }

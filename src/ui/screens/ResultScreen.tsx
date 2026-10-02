@@ -1,14 +1,19 @@
+import type { MutationStatus } from "@tanstack/react-query";
 import { formatTime } from "../formatTime";
 import type { MatchResult } from "../matchResult";
 
 interface ResultScreenProps {
   result: MatchResult;
+  saveStatus: MutationStatus;
+  onRetry: () => void;
   onPlayAgain: () => void;
   onMainMenu: () => void;
 }
 
 export function ResultScreen({
   result,
+  saveStatus,
+  onRetry,
   onPlayAgain,
   onMainMenu,
 }: ResultScreenProps) {
@@ -32,6 +37,20 @@ export function ResultScreen({
       <p style={{ margin: 0, fontSize: 18 }}>
         Time played {formatTime(result.secondsPlayed)}
       </p>
+
+      {saveStatus === "error" ? (
+        <div role="alert">
+          <p style={{ margin: 0 }}>Could not save this match.</p>
+          <button type="button" onClick={onRetry}>
+            Try again
+          </button>
+        </div>
+      ) : (
+        <p role="status" style={{ margin: 0 }}>
+          {saveStatus === "success" ? "Match saved." : "Saving match..."}
+        </p>
+      )}
+
       <button
         type="button"
         onClick={onPlayAgain}

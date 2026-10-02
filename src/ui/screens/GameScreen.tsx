@@ -16,9 +16,10 @@ import { seedFromSearch } from "../../game/seed";
 
 declare global {
   interface Window {
-    // Only set when the url has ?testControls: lets the end-to-end tests play
-    // the simulation without waiting for real time or drawing every frame.
-    __pirateBattle?: { advance: (seconds: number) => void };
+    __pirateBattle?: {
+      advance: (seconds: number) => void;
+      stats: () => { running: boolean; entities: number };
+    };
   }
 }
 
@@ -163,6 +164,13 @@ export function GameScreen({
         const running = loop;
         window.__pirateBattle = {
           advance: (seconds) => running.advance(seconds),
+          stats: () => ({
+            running: state.status !== "over",
+            entities:
+              state.enemies.length +
+              state.projectiles.length +
+              state.enemyProjectiles.length,
+          }),
         };
       }
       setLoadState("ready");

@@ -6,6 +6,7 @@
   "scripts": {
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "perf": "playwright test -c playwright.perf.config.ts",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",

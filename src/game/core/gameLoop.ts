@@ -1,6 +1,6 @@
 export interface GameLoopOptions {
   update: (dt: number) => void;
-  render?: () => void;
+  render?: (dt: number) => void;
   maxDt?: number;
 }
 
@@ -38,7 +38,7 @@ export class GameLoop {
       this.options.update(dt);
       rest -= dt;
     }
-    this.options.render?.();
+    this.options.render?.(0);
   }
 
   private tick = (now: number): void => {
@@ -49,7 +49,7 @@ export class GameLoop {
 
     if (!this.paused) {
       this.options.update(dt);
-      this.options.render?.();
+      this.options.render?.(dt);
     }
 
     this.frameId = requestAnimationFrame(this.tick);

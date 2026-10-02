@@ -1,7 +1,7 @@
 import { Container, Graphics, Sprite, TilingSprite } from "pixi.js";
 import type { Application, Texture } from "pixi.js";
 import { gameConfig } from "../config/gameConfig";
-import type { GameState } from "../core/game";
+import type { GameEvent, GameState } from "../core/game";
 import { gridTile } from "./atlas";
 import type { TextureMap } from "./atlas";
 import { damageLevelFor, shipFrameName } from "./shipSprites";
@@ -24,6 +24,23 @@ const HEALTH_BAR_OFFSET = 34;
 const HEALTH_BAR_BACK_COLOR = 0x3a3a3a;
 const HEALTH_BAR_COLOR = 0x4ec24e;
 
+const EXPLOSION_FRAMES = [
+  "explosion_3.png",
+  "explosion_2.png",
+  "explosion_1.png",
+] as const;
+const SPARK_FRAMES = ["explosion_3.png"] as const;
+const MAX_EFFECTS = 60;
+
+interface Effect {
+  sprite: Sprite;
+  age: number;
+  life: number;
+  frames: readonly string[];
+  fromScale: number;
+  toScale: number;
+}
+
 export class Renderer {
   private readonly app: Application;
   private readonly textures: TextureMap;
@@ -33,6 +50,8 @@ export class Renderer {
   private readonly enemyLayer = new Container();
   private readonly enemySprites: Sprite[] = [];
   private readonly healthGraphics = new Graphics();
+  private readonly effectLayer = new Container();
+  private effects: Effect[] = [];
 
   constructor(
     app: Application,
@@ -71,12 +90,13 @@ export class Renderer {
       this.projectileGraphics,
       this.enemyLayer,
       this.playerSprite,
+      this.effectLayer,
       this.healthGraphics,
     );
     this.render(state);
   }
 
-  render(state: GameState): void {
+  render(state: GameState, dt = 0): void {
     const { player } = state;
 
     const level = damageLevelFor(player.hp, gameConfig.player.maxHp);
@@ -100,6 +120,8 @@ export class Renderer {
         .fill(ENEMY_PROJECTILE_COLOR);
     }
     this.drawEnemies(state);
+    this.spawnEffects(state.events);
+    this.updateEffects(dt);
 
     this.healthGraphics.clear();
     this.drawHealthBar(player.x, player.y, player.hp, gameConfig.player.maxHp);
@@ -147,6 +169,91 @@ export class Renderer {
       .fill(HEALTH_BAR_BACK_COLOR)
       .rect(left, top, HEALTH_BAR_WIDTH * ratio, HEALTH_BAR_HEIGHT)
       .fill(HEALTH_BAR_COLOR);
+  }
+
+  private spawnEffects(events: readonly GameEvent[]): void {
+    for (const event of events) {
+      switch (event.type) {
+        case "shot":
+          this.addEffect(
+            event.x,
+            event.y,
+            SPARK_FRAMES,
+            0.12,
+            0.3,
+            0.7,
+            0xffe08a,
+          );
+          break;
+        case "hit":
+          this.addEffect(
+            event.x,
+            event.y,
+            SPARK_FRAMES,
+            0.18,
+            0.4,
+            0.8,
+            0xff9a3c,
+          );
+          break;
+        case "explosion":
+          if (event.size === "large") {
+            this.addEffect(event.x, event.y, EXPLOSION_FRAMES, 0.9, 1, 2.4);
+          } else {
+            this.addEffect(event.x, event.y, EXPLOSION_FRAMES, 0.5, 0.5, 1);
+          }
+          break;
+      }
+    }
+  }
+
+  private addEffect(
+    x: number,
+    y: number,
+    frames: readonly string[],
+    life: number,
+    fromScale: number,
+    toScale: number,
+    tint = 0xffffff,
+  ): void {
+    if (this.effects.length >= MAX_EFFECTS) return;
+    const sprite = new Sprite(this.effectTexture(frames[0]));
+    sprite.anchor.set(0.5);
+    sprite.position.set(x, y);
+    sprite.tint = tint;
+    this.effectLayer.addChild(sprite);
+    this.effects.push({ sprite, age: 0, life, frames, fromScale, toScale });
+  }
+
+  // Moves every effect along its animation and removes the finished ones.
+  private updateEffects(dt: number): void {
+    for (const effect of this.effects) {
+      effect.age += dt;
+      const progress = Math.min(1, effect.age / effect.life);
+      const frame =
+        effect.frames[
+          Math.min(
+            effect.frames.length - 1,
+            Math.floor(progress * effect.frames.length),
+          )
+        ];
+      effect.sprite.texture = this.effectTexture(frame);
+      effect.sprite.scale.set(
+        effect.fromScale + (effect.toScale - effect.fromScale) * progress,
+      );
+      effect.sprite.alpha = progress < 0.6 ? 1 : 1 - (progress - 0.6) / 0.4;
+    }
+    this.effects = this.effects.filter((effect) => {
+      if (effect.age < effect.life) return true;
+      effect.sprite.destroy();
+      return false;
+    });
+  }
+
+  private effectTexture(name: string): Texture {
+    const texture = this.textures.get(name);
+    if (!texture) throw new Error(`Missing texture: ${name}`);
+    return texture;
   }
 
   private shipTexture(color: ShipColor, level: DamageLevel): Texture {

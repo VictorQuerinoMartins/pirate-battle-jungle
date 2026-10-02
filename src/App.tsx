@@ -42,6 +42,7 @@ export default function App() {
         <ResultScreen
           result={screen.result}
           onPlayAgain={() => setScreen({ name: "game" })}
+          onMainMenu={() => setScreen({ name: "menu" })}
         />
       );
     case "menu":

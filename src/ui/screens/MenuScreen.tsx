@@ -1,10 +1,11 @@
 import { useState } from "react";
 import type { GameOptions } from "../../game/core/options";
 import { loadPlayerId } from "../../storage/playerId";
+import { ControlsHelp } from "../components/ControlsHelp";
 import { HistoryPanel } from "../components/HistoryPanel";
 import { RankingPanel } from "../components/RankingPanel";
-import { ControlsHelp } from "../components/ControlsHelp";
 import { ScenarioPanel } from "../components/ScenarioPanel";
+import { SpriteButton } from "../components/SpriteButton";
 
 interface MenuScreenProps {
   options: GameOptions;
@@ -17,62 +18,54 @@ type Tab = "ranking" | "history";
 export function MenuScreen({ options, onPlay, onOptions }: MenuScreenProps) {
   const [tab, setTab] = useState<Tab>("ranking");
   const [playerId] = useState(() => loadPlayerId());
-  const buttonStyle = { padding: "10px 28px", fontSize: 18, cursor: "pointer" };
 
   return (
-    <div
-      style={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 16,
-        background: "#102a43",
-        color: "#fff",
-        overflowY: "auto",
-      }}
-    >
-      <h1 style={{ margin: 0 }}>Pirate Battle</h1>
-      <button type="button" onClick={onPlay} style={buttonStyle}>
-        Play
-      </button>
-      <button type="button" onClick={onOptions} style={buttonStyle}>
-        Options
-      </button>
-
-      <ControlsHelp />
-
-      <div
-        role="tablist"
-        aria-label="Scores"
-        style={{ display: "flex", gap: 8 }}
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "ranking"}
-          onClick={() => setTab("ranking")}
-        >
-          Ranking
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "history"}
-          onClick={() => setTab("history")}
-        >
-          Match History
-        </button>
+    <div className="scene">
+      <div className="menu-column">
+        <h1 className="menu-title">
+          <span
+            className="sprite f-title scale-lg"
+            role="img"
+            aria-label="Pirate Battle"
+          />
+        </h1>
+        <div className="sprite f-panel card scale-lg">
+          <SpriteButton onClick={onPlay}>Play</SpriteButton>
+          <SpriteButton variant="secondary" onClick={onOptions}>
+            Options
+          </SpriteButton>
+          <ControlsHelp />
+        </div>
       </div>
-      <div role="tabpanel">
-        {tab === "ranking" ? (
-          <RankingPanel options={options} />
-        ) : (
-          <HistoryPanel playerId={playerId} />
-        )}
+
+      <div className="scores">
+        <div role="tablist" aria-label="Scores">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "ranking"}
+            onClick={() => setTab("ranking")}
+          >
+            Ranking
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "history"}
+            onClick={() => setTab("history")}
+          >
+            Match History
+          </button>
+        </div>
+        <div role="tabpanel">
+          {tab === "ranking" ? (
+            <RankingPanel options={options} />
+          ) : (
+            <HistoryPanel playerId={playerId} />
+          )}
+        </div>
+        <ScenarioPanel />
       </div>
-      <ScenarioPanel />
     </div>
   );
 }

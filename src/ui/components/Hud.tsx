@@ -9,44 +9,44 @@ export interface HudData {
 
 export function Hud({ data }: { data: HudData }) {
   const { maxHp } = gameConfig.player;
-  const percent = Math.max(0, Math.min(100, (data.hp / maxHp) * 100));
+  const ratio = Math.max(0, Math.min(1, data.hp / maxHp));
+  const fill =
+    ratio > 0.5
+      ? "f-health-green"
+      : ratio > 0.25
+        ? "f-health-amber"
+        : "f-health-red";
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "12px 16px",
-        color: "#fff",
-        fontWeight: 700,
-        textShadow: "0 1px 3px rgba(0, 0, 0, 0.8)",
-        pointerEvents: "none",
-      }}
-    >
-      <div style={{ position: "relative", width: 220, height: 20 }}>
-        <div style={{ position: "absolute", inset: 0, background: "rgba(0, 0, 0, 0.5)", borderRadius: 10 }} />
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            bottom: 0,
-            width: `${percent}%`,
-            background: "#e0413a",
-            borderRadius: 10,
-          }}
+    <div className="hud">
+      <div
+        className="hud-health"
+        role="meter"
+        aria-label="Ship health"
+        aria-valuemin={0}
+        aria-valuemax={maxHp}
+        aria-valuenow={Math.round(data.hp)}
+      >
+        <span className="sprite f-health-frame" aria-hidden="true" />
+        <span
+          className={`sprite ${fill}`}
+          style={{ clipPath: `inset(0 ${(1 - ratio) * 100}% 0 0)` }}
+          aria-hidden="true"
         />
-        <div style={{ position: "absolute", inset: 0, textAlign: "center", lineHeight: "20px", fontSize: 13 }}>
+        <span className="hud-health-text">
           {Math.round(data.hp)} / {maxHp}
+        </span>
+      </div>
+      <div className="hud-right">
+        <div className="sprite f-counter hud-counter">
+          <span className="sprite f-icon-score" aria-hidden="true" />
+          <span>Score {data.score}</span>
+        </div>
+        <div className="sprite f-counter hud-counter">
+          <span className="sprite f-icon-time" aria-hidden="true" />
+          <span role="timer">{formatTime(data.secondsLeft)}</span>
         </div>
       </div>
-      <div>Score {data.score}</div>
-      <div>{formatTime(data.secondsLeft)}</div>
     </div>
   );
 }

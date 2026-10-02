@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
 import { queryClient } from "./api/queryClient";
+import "./ui/ui.css";
 
 async function enableMocks(): Promise<void> {
   try {

@@ -1,0 +1,330 @@
+/* Theme of the Pirate Battle interface.
+   Sprites are cut from public/assets/spritesheet/ui_sheet.png (1024x1024).
+   --s is the scale of an element (default 1). */
+
+#root {
+  font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+}
+
+/* ---------- sprites ---------- */
+
+.sprite,
+.btn,
+.btn-round {
+  background-image: url("/assets/spritesheet/ui_sheet.png");
+  background-repeat: no-repeat;
+  background-size: calc(var(--s, 1) * 1024px) calc(var(--s, 1) * 1024px);
+}
+
+.sprite {
+  display: inline-block;
+  flex: none;
+}
+
+.f-panel { width: calc(var(--s, 1) * 384px); height: calc(var(--s, 1) * 480px); background-position: calc(var(--s, 1) * -4px) calc(var(--s, 1) * -4px); }
+.f-title { width: calc(var(--s, 1) * 384px); height: calc(var(--s, 1) * 128px); background-position: calc(var(--s, 1) * -396px) calc(var(--s, 1) * -4px); }
+.f-counter { width: calc(var(--s, 1) * 160px); height: calc(var(--s, 1) * 56px); background-position: calc(var(--s, 1) * -4px) calc(var(--s, 1) * -684px); }
+.f-health-frame { width: calc(var(--s, 1) * 256px); height: calc(var(--s, 1) * 48px); background-position: calc(var(--s, 1) * -4px) calc(var(--s, 1) * -748px); }
+.f-health-green { width: calc(var(--s, 1) * 256px); height: calc(var(--s, 1) * 48px); background-position: calc(var(--s, 1) * -436px) calc(var(--s, 1) * -684px); }
+.f-health-amber { width: calc(var(--s, 1) * 256px); height: calc(var(--s, 1) * 48px); background-position: calc(var(--s, 1) * -172px) calc(var(--s, 1) * -684px); }
+.f-health-red { width: calc(var(--s, 1) * 256px); height: calc(var(--s, 1) * 48px); background-position: calc(var(--s, 1) * -700px) calc(var(--s, 1) * -684px); }
+
+.f-icon-score,
+.f-icon-time,
+.f-icon-pause,
+.f-icon-minus,
+.f-icon-plus,
+.f-icon-forward,
+.f-icon-fire-front,
+.f-icon-fire-left,
+.f-icon-fire-right,
+.f-icon-turn-left,
+.f-icon-turn-right {
+  width: calc(var(--s, 1) * 48px);
+  height: calc(var(--s, 1) * 48px);
+}
+.f-icon-score { background-position: calc(var(--s, 1) * -940px) calc(var(--s, 1) * -748px); }
+.f-icon-time { background-position: calc(var(--s, 1) * -60px) calc(var(--s, 1) * -804px); }
+.f-icon-pause { background-position: calc(var(--s, 1) * -716px) calc(var(--s, 1) * -748px); }
+.f-icon-minus { background-position: calc(var(--s, 1) * -660px) calc(var(--s, 1) * -748px); }
+.f-icon-plus { background-position: calc(var(--s, 1) * -828px) calc(var(--s, 1) * -748px); }
+.f-icon-forward { background-position: calc(var(--s, 1) * -492px) calc(var(--s, 1) * -748px); }
+.f-icon-fire-front { background-position: calc(var(--s, 1) * -324px) calc(var(--s, 1) * -748px); }
+.f-icon-fire-left { background-position: calc(var(--s, 1) * -380px) calc(var(--s, 1) * -748px); }
+.f-icon-fire-right { background-position: calc(var(--s, 1) * -436px) calc(var(--s, 1) * -748px); }
+.f-icon-turn-left { background-position: calc(var(--s, 1) * -116px) calc(var(--s, 1) * -804px); }
+.f-icon-turn-right { background-position: calc(var(--s, 1) * -172px) calc(var(--s, 1) * -804px); }
+
+/* ---------- scales (shrink on short screens, like a phone in landscape) ---------- */
+
+.scale-lg { --s: 0.9; }
+.scale-md { --s: 0.7; }
+
+/* ---------- buttons ---------- */
+
+.btn {
+  --s: 0.8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: calc(var(--s) * 256px);
+  height: calc(var(--s) * 88px);
+  padding: 0 calc(var(--s) * 28px);
+  border: 0;
+  background-color: transparent;
+  font: inherit;
+  font-size: calc(var(--s) * 28px);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.btn-primary {
+  background-position: calc(var(--s) * -532px) calc(var(--s) * -492px);
+  color: #3a210d;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+.btn-primary:hover:not(:disabled) { background-position: calc(var(--s) * -268px) calc(var(--s) * -492px); }
+.btn-primary:active:not(:disabled) { background-position: calc(var(--s) * -4px) calc(var(--s) * -588px); }
+.btn-primary:disabled { background-position: calc(var(--s) * -4px) calc(var(--s) * -492px); color: #5f564b; cursor: not-allowed; }
+
+.btn-secondary {
+  background-position: calc(var(--s) * -268px) calc(var(--s) * -588px);
+  color: #f6e7c8;
+}
+.btn-secondary:hover:not(:disabled) { filter: brightness(1.25); }
+.btn-secondary:active:not(:disabled) { background-position: calc(var(--s) * -532px) calc(var(--s) * -588px); }
+
+.btn-round {
+  --s: 0.8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: calc(var(--s) * 64px);
+  height: calc(var(--s) * 64px);
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  background-position: calc(var(--s) * -868px) calc(var(--s) * -588px);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.btn-round:hover { background-position: calc(var(--s) * -796px) calc(var(--s) * -588px); }
+.btn-round:active { background-position: calc(var(--s) * -940px) calc(var(--s) * -588px); }
+.btn-round > .sprite { --s: 0.6; }
+
+.btn:focus-visible,
+.btn-round:focus-visible,
+.scores [role="tab"]:focus-visible,
+.scores button:focus-visible,
+.scores summary:focus-visible,
+.scores select:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px #0b1c2d;
+}
+
+/* ---------- scenes and cards ---------- */
+
+.scene {
+  box-sizing: border-box;
+  height: 100%;
+  overflow: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 16px;
+  color: #f6e7c8;
+  background:
+    linear-gradient(rgba(6, 22, 38, 0.45), rgba(6, 22, 38, 0.6)),
+    url("/assets/ui_scene_background.png") center / cover no-repeat;
+}
+
+.menu-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: auto 0;
+}
+
+.menu-title { margin: 0; line-height: 0; }
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+  gap: 10px;
+  padding: calc(var(--s) * 48px) calc(var(--s) * 40px) calc(var(--s) * 40px);
+  text-align: center;
+  color: #f6e7c8;
+}
+.card-title {
+  margin: 0;
+  font-size: calc(var(--s) * 34px);
+  color: #ffd978;
+  text-shadow: 0 2px 0 #6b3a12, 0 0 8px rgba(0, 0, 0, 0.6);
+}
+.card p { margin: 0; }
+.card ul { font-size: 13px; line-height: 1.5; text-align: left; }
+.card h2 { color: #ffd978; }
+.card kbd {
+  padding: 0 5px;
+  border: 1px solid #b9722f;
+  border-radius: 4px;
+  background: #223a57;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+}
+
+.result-score,
+.result-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.result-score { font-size: calc(var(--s) * 28px); font-weight: 700; color: #fff; }
+.result-time { font-size: calc(var(--s) * 20px); }
+.result-score > .sprite,
+.result-time > .sprite { --s: 0.6; }
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.option-label { flex: 1; text-align: left; font-size: 16px; }
+.option-value { min-width: 52px; font-weight: 700; font-size: 18px; color: #fff; }
+
+/* ---------- ranking and history panel ---------- */
+
+.scores {
+  box-sizing: border-box;
+  width: min(100%, 380px);
+  max-height: 100%;
+  overflow: auto;
+  margin: auto 0;
+  padding: 14px 16px;
+  color: #f6e7c8;
+  background: #14263d;
+  border: 5px solid #b9722f;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 0 0 2px #e0a25a;
+}
+.scores [role="tablist"] { display: flex; gap: 8px; margin-bottom: 12px; }
+.scores [role="tab"] {
+  flex: 1;
+  padding: 8px 10px;
+  font: inherit;
+  font-weight: 700;
+  color: #f6e7c8;
+  background: #223a57;
+  border: 2px solid #b9722f;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.scores [role="tab"][aria-selected="true"] { color: #2b1808; background: #e0a25a; }
+.scores table { width: 100%; margin-bottom: 10px; border-collapse: collapse; }
+.scores th { padding: 4px 6px; text-align: left; color: #ffd978; border-bottom: 2px solid #b9722f; }
+.scores td { padding: 4px 6px; }
+.scores tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.06); }
+.scores nav { justify-content: center; }
+.scores button:not([role="tab"]) {
+  padding: 6px 12px;
+  font: inherit;
+  font-weight: 700;
+  color: #2b1808;
+  background: #e0a25a;
+  border: 2px solid #b9722f;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.scores button:disabled { opacity: 0.5; cursor: not-allowed; }
+.scores summary { margin-top: 10px; cursor: pointer; }
+.scores select { font: inherit; }
+
+/* ---------- HUD ---------- */
+
+.hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  color: #fff;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+.hud-health {
+  --s: 0.85;
+  position: relative;
+  width: calc(var(--s) * 256px);
+  height: calc(var(--s) * 48px);
+}
+.hud-health > .sprite { position: absolute; top: 0; left: 0; }
+.hud-health-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+.hud-right { display: flex; gap: 8px; }
+.hud-counter {
+  --s: 0.9;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  padding-left: calc(var(--s) * 14px);
+  font-size: calc(var(--s) * 20px);
+}
+.hud-counter > .sprite { --s: 0.5; }
+
+/* ---------- touch controls ---------- */
+
+.touch-btn {
+  --s: 1;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.touch-btn > .sprite { --s: 0.75; }
+.touch-pause {
+  --s: 0.75;
+  position: absolute;
+  top: 60px;
+  right: 12px;
+}
+
+/* ---------- short screens (phone in landscape) ---------- */
+
+@media (max-height: 600px) {
+  .scale-lg { --s: 0.6; }
+  .scale-md { --s: 0.55; }
+  .btn { --s: 0.55; }
+  .scene { gap: 12px; padding: 8px; }
+  .card { gap: 6px; }
+  .card ul { font-size: 11px; line-height: 1.35; }
+  .card h2 { font-size: 15px !important; margin-bottom: 4px !important; }
+}

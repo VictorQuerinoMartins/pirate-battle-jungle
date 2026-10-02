@@ -1,6 +1,7 @@
 import type { MutationStatus } from "@tanstack/react-query";
 import { formatTime } from "../formatTime";
 import type { MatchResult } from "../matchResult";
+import { SpriteButton } from "../components/SpriteButton";
 
 interface ResultScreenProps {
   result: MatchResult;
@@ -20,53 +21,36 @@ export function ResultScreen({
   const title = result.reason === "time" ? "TIME'S UP" : "SHIP DESTROYED";
 
   return (
-    <div
-      style={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 16,
-        background: "#102a43",
-        color: "#fff",
-      }}
-    >
-      <h1 style={{ margin: 0 }}>{title}</h1>
-      <p style={{ margin: 0, fontSize: 24 }}>Score {result.score}</p>
-      <p style={{ margin: 0, fontSize: 18 }}>
-        Time played {formatTime(result.secondsPlayed)}
-      </p>
-
-      {saveStatus === "error" ? (
-        <div role="alert">
-          <p style={{ margin: 0 }}>
-            Could not save this match. It is kept and will be sent again.
-          </p>
-          <button type="button" onClick={onRetry}>
-            Try again
-          </button>
-        </div>
-      ) : (
-        <p role="status" style={{ margin: 0 }}>
-          {saveStatus === "success" ? "Match saved." : "Saving match..."}
+    <div className="scene">
+      <div className="sprite f-panel card scale-lg">
+        <h1 className="card-title">{title}</h1>
+        <p className="result-score">
+          <span className="sprite f-icon-score" aria-hidden="true" />
+          Score {result.score}
         </p>
-      )}
+        <p className="result-time">
+          <span className="sprite f-icon-time" aria-hidden="true" />
+          Time played {formatTime(result.secondsPlayed)}
+        </p>
 
-      <button
-        type="button"
-        onClick={onPlayAgain}
-        style={{ padding: "10px 28px", fontSize: 18, cursor: "pointer" }}
-      >
-        Play again
-      </button>
-      <button
-        type="button"
-        onClick={onMainMenu}
-        style={{ padding: "10px 28px", fontSize: 18, cursor: "pointer" }}
-      >
-        Main menu
-      </button>
+        {saveStatus === "error" ? (
+          <div role="alert">
+            <p>Could not save this match. It is kept and will be sent again.</p>
+            <SpriteButton variant="secondary" onClick={onRetry}>
+              Try again
+            </SpriteButton>
+          </div>
+        ) : (
+          <p role="status">
+            {saveStatus === "success" ? "Match saved." : "Saving match..."}
+          </p>
+        )}
+
+        <SpriteButton onClick={onPlayAgain}>Play again</SpriteButton>
+        <SpriteButton variant="secondary" onClick={onMainMenu}>
+          Main menu
+        </SpriteButton>
+      </div>
     </div>
   );
 }

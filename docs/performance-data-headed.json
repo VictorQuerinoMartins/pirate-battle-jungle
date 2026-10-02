@@ -1,0 +1,39 @@
+{
+  "environment": {
+    "date": "2026-10-02T17:59:03.711Z",
+    "cpu": "11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz",
+    "cores": 16,
+    "ramGb": 15.8,
+    "os": "win32",
+    "browser": "Chromium 153.0.8010.12",
+    "headless": false,
+    "viewport": "1280x720",
+    "dpr": 1,
+    "gpu": "ANGLE (Intel, Intel(R) UHD Graphics (0x00009A60) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+  },
+  "frames": {
+    "activeSeconds": 180.08059999999998,
+    "frames": 25883,
+    "matches": 13,
+    "avgFps": 143.7,
+    "minFps": 11.1,
+    "avgMs": 6.96,
+    "p95Ms": 7.1,
+    "p99Ms": 7.1,
+    "maxMs": 90.2,
+    "slowPercent": 0,
+    "entitiesAvg": 5.4,
+    "entitiesMax": 13
+  },
+  "memory": {
+    "heapMb": [
+      5.834809303283691,
+      8.186883926391602,
+      8.54089069366455,
+      8.774076461791992,
+      9.081358909606934,
+      9.319820404052734
+    ],
+    "growthMb": 3.485011100769043
+  }
+}

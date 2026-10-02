@@ -47,6 +47,16 @@ export interface GameConfig {
     readonly minDistanceFromPlayer: number;
     readonly maxAttempts: number;
   };
+
+  readonly fort: {
+    readonly islandIndex: number; // which island the fort stands on
+    readonly unlockScore: number;
+    readonly range: number;
+    readonly fireCooldownMs: number;
+    readonly projectileSpeed: number;
+    readonly shotDamage: number;
+    readonly muzzleLength: number;
+  };
 }
 
 export const gameConfig: GameConfig = {
@@ -86,5 +96,15 @@ export const gameConfig: GameConfig = {
     maxEnemies: 8,
     minDistanceFromPlayer: 300,
     maxAttempts: 10,
+  },
+
+  fort: {
+    islandIndex: 0,
+    unlockScore: 5,
+    range: 460,
+    fireCooldownMs: 3000,
+    projectileSpeed: 300,
+    shotDamage: 8,
+    muzzleLength: 26,
   },
 };

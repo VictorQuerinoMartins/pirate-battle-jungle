@@ -27,6 +27,16 @@ export interface ProjectileState {
   vx: number;
   vy: number;
   timeLeft: number;
+  damage?: number;
+  ignoreIsland?: number;
+}
+
+export interface FortState {
+  x: number;
+  y: number;
+  angle: number;
+  cooldown: number; // seconds until the next shot
+  active: boolean;
 }
 
 export interface PlayerState {
@@ -45,7 +55,7 @@ export interface EnemyState {
   y: number;
   angle: number;
   hp: number;
-  cooldown: number; // seconds until the next shot (only shooters use it)
+  cooldown: number;
 }
 
 export type GameStatus = "playing" | "over";
@@ -57,8 +67,8 @@ export type GameEvent =
 export interface GameState {
   player: PlayerState;
   islands: readonly Circle[];
-  projectiles: ProjectileState[]; // fired by the player
-  enemyProjectiles: ProjectileState[]; // fired by shooters
+  projectiles: ProjectileState[]; 
+  enemyProjectiles: ProjectileState[];
   enemies: EnemyState[];
   spawnTimer: number;
   spawnInterval: number;
@@ -67,6 +77,7 @@ export interface GameState {
   timeLeft: number;
   status: GameStatus;
   events: GameEvent[];
+  fort: FortState;
 }
 
 export function createGameState(
@@ -74,6 +85,7 @@ export function createGameState(
   options: GameOptions = defaultOptions,
 ): GameState {
   const { arena, player } = gameConfig;
+  const fortIsland = arena.islands[gameConfig.fort.islandIndex];
   return {
     player: {
       x: arena.width / 2,
@@ -93,6 +105,16 @@ export function createGameState(
     timeLeft: options.durationSeconds,
     status: "playing",
     events: [],
+    fort: {
+      x: fortIsland.x,
+      y: fortIsland.y,
+      angle: Math.atan2(
+        arena.height / 2 - fortIsland.y,
+        arena.width / 2 - fortIsland.x,
+      ),
+      cooldown: 0,
+      active: false,
+    },
   };
 }
 
@@ -166,6 +188,7 @@ export function updateGame(
   );
   hitEnemies(state);
   updateEnemies(state, dt);
+  updateFort(state, dt);
   enemiesHitPlayer(state);
   enemyShotsHitPlayer(state);
 
@@ -252,7 +275,7 @@ function enemyShotsHitPlayer(state: GameState): void {
       { x: player.x, y: player.y, radius: playerConfig.radius },
     );
     if (hit) {
-      player.hp = Math.max(0, player.hp - shooter.shotDamage);
+      player.hp = Math.max(0, player.hp - (p.damage ?? shooter.shotDamage));
       state.events.push({ type: "hit", x: p.x, y: p.y });
     }
     return !hit; // a shot that hit the ship disappears
@@ -267,19 +290,23 @@ function createProjectile(
   x: number,
   y: number,
   angle: number,
+  options: { speed?: number; damage?: number; ignoreIsland?: number } = {},
 ): ProjectileState {
-  const { speed, lifetimeMs } = gameConfig.projectile;
+  const { speed: defaultSpeed, lifetimeMs } = gameConfig.projectile;
+  const speed = options.speed ?? defaultSpeed;
   return {
     x,
     y,
     vx: Math.cos(angle) * speed,
     vy: Math.sin(angle) * speed,
     timeLeft: lifetimeMs / 1000,
+    ...(options.damage !== undefined && { damage: options.damage }),
+    ...(options.ignoreIsland !== undefined && {
+      ignoreIsland: options.ignoreIsland,
+    }),
   };
 }
 
-// Moves a list of projectiles and keeps only those still alive.
-// Works for both the player's shots and the enemies' shots.
 function advanceProjectiles(
   projectiles: ProjectileState[],
   state: GameState,
@@ -296,8 +323,10 @@ function advanceProjectiles(
   return projectiles.filter((p) => {
     const insideArena =
       p.x >= 0 && p.x <= arena.width && p.y >= 0 && p.y <= arena.height;
-    const hitsIsland = state.islands.some((island) =>
-      circlesOverlap({ x: p.x, y: p.y, radius: 0 }, island),
+    const hitsIsland = state.islands.some(
+      (island, index) =>
+        index !== p.ignoreIsland &&
+        circlesOverlap({ x: p.x, y: p.y, radius: 0 }, island),
     );
     return p.timeLeft > 0 && insideArena && !hitsIsland;
   });
@@ -390,4 +419,38 @@ function updateEnemies(state: GameState, dt: number): void {
       }
     }
   }
+}
+
+// The fort wakes up when the score reaches the unlock value. It aims at the
+// player and fires slowly. Its shot goes in the enemy list, so it uses the
+// same damage, trail and sound as the Shooter's, but it carries its own
+// damage and ignores the island it stands on.
+function updateFort(state: GameState, dt: number): void {
+  const { fort: config } = gameConfig;
+  const fort = state.fort;
+  const player = state.player;
+
+  const wasActive = fort.active;
+  fort.active = state.score >= config.unlockScore;
+  if (!fort.active) return;
+  // a full cooldown before the first shot works as a warning
+  if (!wasActive) fort.cooldown = config.fireCooldownMs / 1000;
+
+  fort.cooldown = Math.max(0, fort.cooldown - dt);
+  fort.angle = Math.atan2(player.y - fort.y, player.x - fort.x);
+
+  const distance = Math.hypot(player.x - fort.x, player.y - fort.y);
+  if (distance > config.range || fort.cooldown > 0) return;
+
+  const x = fort.x + Math.cos(fort.angle) * config.muzzleLength;
+  const y = fort.y + Math.sin(fort.angle) * config.muzzleLength;
+  state.enemyProjectiles.push(
+    createProjectile(x, y, fort.angle, {
+      speed: config.projectileSpeed,
+      damage: config.shotDamage,
+      ignoreIsland: config.islandIndex,
+    }),
+  );
+  state.events.push({ type: "shot", x, y });
+  fort.cooldown = config.fireCooldownMs / 1000;
 }

@@ -43,7 +43,10 @@ const PLANT_SPOTS = [
   { dx: 0.05, dy: 0.3, plant: 0 },
 ] as const;
 
-// Rocks (plain and mossy) 
+// Rocks (plain and mossy) on the beach and tiny leaves on the grass. Each
+// island has its own list. `tile` is the tile number in tiles_sheet.png;
+// `dist` is a fraction of the island radius and `angle` is turned a little
+// more on each island.
 const DECOR_BY_ISLAND = [
   [
     { angle: 3.6, dist: 0.84, tile: 66, scale: 0.5 },
@@ -65,6 +68,18 @@ const DECOR_BY_ISLAND = [
 ] as const;
 const TILES_PER_ROW = 16;
 const TILE_SIZE = 64;
+
+// The fort: a 3x3 block of tiles (corner towers, walls and an empty courtyard
+// marked 0) with a cannon in the middle.
+const FORT_LAYOUT = [
+  [77, 16, 78],
+  [15, 0, 15],
+  [93, 16, 94],
+] as const;
+const FORT_TILE_SCALE = 0.75;
+const FORT_TILE = TILE_SIZE * FORT_TILE_SCALE;
+const FORT_CANNON_SCALE = 1.2;
+const FORT_SLEEP_TINT = 0x8a8a8a; // the cannon is dark until the fort wakes up
 
 const PROJECTILE_RADIUS = 4;
 const PROJECTILE_COLOR = 0x2b2b2b;
@@ -124,6 +139,7 @@ export class Renderer {
   private readonly water: TilingSprite;
   private readonly waves: TilingSprite;
   private waterTime = 0;
+  private readonly fortCannon: Sprite;
 
   constructor(
     app: Application,
@@ -134,7 +150,8 @@ export class Renderer {
     this.app = app;
     this.textures = textures;
 
-    // Layer 1: the sea
+    // Layer 1: the sea. A second, larger and fainter copy of the same tile
+    // drifts the other way, so the water looks alive.
     const { width, height } = gameConfig.arena;
     const waterTexture = gridTile(tileSheet, WATER_TILE);
     this.water = new TilingSprite({ texture: waterTexture, width, height });
@@ -142,11 +159,14 @@ export class Renderer {
     this.waves.tileScale.set(1.6);
     this.waves.alpha = WAVE_ALPHA;
 
-    // Layer 2: the islands, built in layers....
-
+    // Layer 2: the islands, built in layers and drawn inside the same circle
+    // used for collision: shallow water (the sandbank), sand (a seamless tile
+    // cut by the outline), the beach edge, grass, plants, rocks and leaves.
     const islands = new Container();
     const sandTexture = gridTile(tileSheet, SAND_TILE);
 
+    // One pixel is cut from each side: the plants only have empty pixels
+    // there, and it stops the filter from mixing in the neighbouring tile.
     const plantTextures = PLANT_ARTS.map((art) =>
       sheetRegion(
         tileSheet,
@@ -157,6 +177,7 @@ export class Renderer {
       ),
     );
 
+    // Same one-pixel cut for the rocks and leaves, picked by tile number.
     const decorTextures = new Map<number, Texture>();
     const decorTexture = (tile: number): Texture => {
       let texture = decorTextures.get(tile);
@@ -233,6 +254,28 @@ export class Renderer {
       }
     });
 
+    // The fort stands on one of the islands. The cannon turns toward the
+    // player in `render`.
+    const { fort } = state;
+    FORT_LAYOUT.forEach((row, rowIndex) => {
+      row.forEach((tile, colIndex) => {
+        if (tile === 0) return;
+        const piece = new Sprite(gridTile(tileSheet, tile));
+        piece.anchor.set(0.5);
+        piece.scale.set(FORT_TILE_SCALE);
+        piece.position.set(
+          fort.x + (colIndex - 1) * FORT_TILE,
+          fort.y + (rowIndex - 1) * FORT_TILE,
+        );
+        islands.addChild(piece);
+      });
+    });
+    this.fortCannon = new Sprite(this.effectTexture("cannon_mobile.png"));
+    this.fortCannon.anchor.set(0.5);
+    this.fortCannon.scale.set(FORT_CANNON_SCALE);
+    this.fortCannon.position.set(fort.x, fort.y);
+    islands.addChild(this.fortCannon);
+
     // Layer 3: the player ship.
     this.playerSprite = new Sprite(this.shipTexture("red", 0));
     this.playerSprite.anchor.set(0.5);
@@ -255,6 +298,7 @@ export class Renderer {
   render(state: GameState, dt = 0): void {
     const { player } = state;
 
+    // The sea drifts with the game time, so it freezes with the pause.
     this.waterTime += dt;
     this.water.tilePosition.set(this.waterTime * 8, this.waterTime * 3);
     this.waves.tilePosition.set(this.waterTime * -5, this.waterTime * 6);
@@ -267,6 +311,9 @@ export class Renderer {
 
     this.playerSprite.position.set(player.x, player.y);
     this.playerSprite.rotation = player.angle + SPRITE_ROTATION_OFFSET;
+
+    this.fortCannon.rotation = state.fort.angle;
+    this.fortCannon.tint = state.fort.active ? 0xffffff : FORT_SLEEP_TINT;
 
     this.projectileGraphics.clear();
     for (const projectile of state.projectiles) {

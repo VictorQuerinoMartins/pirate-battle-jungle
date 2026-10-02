@@ -69,6 +69,7 @@ export function GameScreen({
       app.canvas.style.height = "100%";
       app.canvas.style.objectFit = "contain";
       const state = createGameState(Date.now(), options);
+      const matchId = crypto.randomUUID();
       const renderer = new Renderer(app, textures, tileSheet, state);
       let finished = false;
       input.attachKeyboard();
@@ -93,6 +94,9 @@ export function GameScreen({
           if (state.status === "over" && !finished) {
             finished = true;
             onFinish({
+              matchId,
+              playedAt: new Date().toISOString(),
+              config: options,
               score: state.score,
               secondsPlayed: Math.round(
                 options.durationSeconds - state.timeLeft,

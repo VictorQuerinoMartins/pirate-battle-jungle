@@ -100,8 +100,29 @@ export function updateGame(
     }
   }
 
-  updateProjectiles(state, dt);
+    updateProjectiles(state, dt);
+  hitEnemies(state);
   updateEnemies(state, dt);
+}
+
+
+function hitEnemies(state: GameState): void {
+  const { chaser, projectile: projectileConfig } = gameConfig;
+
+  state.projectiles = state.projectiles.filter((p) => {
+    const target = state.enemies.find((enemy) =>
+      circlesOverlap(
+        { x: p.x, y: p.y, radius: 0 },
+        { x: enemy.x, y: enemy.y, radius: chaser.radius },
+      ),
+    );
+    if (!target) return true; // hit nothing: the projectile keeps flying
+
+    target.hp -= projectileConfig.damage;
+    return false; // hit an enemy: the projectile is gone
+  });
+
+  state.enemies = state.enemies.filter((enemy) => enemy.hp > 0);
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -142,41 +163,40 @@ function updateProjectiles(state: GameState, dt: number): void {
   });
 }
 
-  function createChaser(state: GameState): EnemyState {
-    const { arena, chaser } = gameConfig;
-    return {
-      x: state.random() < 0.5 ? 0 : arena.width,
-      y: state.random() * arena.height,
-      angle: 0,
-      hp: chaser.maxHp,
-    };
-  }
+function createChaser(state: GameState): EnemyState {
+  const { arena, chaser } = gameConfig;
+  return {
+    x: state.random() < 0.5 ? 0 : arena.width,
+    y: state.random() * arena.height,
+    angle: 0,
+    hp: chaser.maxHp,
+  };
+}
 
-  function updateEnemies(state: GameState, dt: number): void {
-    const { spawn, chaser } = gameConfig;
-    const player = state.player;
+function updateEnemies(state: GameState, dt: number): void {
+  const { spawn, chaser } = gameConfig;
+  const player = state.player;
 
-    state.spawnTimer += dt;
-    if (state.spawnTimer >= spawn.intervalMs / 1000) {
-      state.spawnTimer = 0;
-      if (state.enemies.length < spawn.maxEnemies) {
-        state.enemies.push(createChaser(state));
-      }
-    }
-
-    for (const enemy of state.enemies) {
-      enemy.angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
-      enemy.x += Math.cos(enemy.angle) * chaser.speed * dt;
-      enemy.y += Math.sin(enemy.angle) * chaser.speed * dt;
-
-      for (const island of state.islands) {
-        const pushed = pushOutOfCircle(
-          { x: enemy.x, y: enemy.y, radius: chaser.radius },
-          island,
-        );
-        enemy.x = pushed.x;
-        enemy.y = pushed.y;
-      }
+  state.spawnTimer += dt;
+  if (state.spawnTimer >= spawn.intervalMs / 1000) {
+    state.spawnTimer = 0;
+    if (state.enemies.length < spawn.maxEnemies) {
+      state.enemies.push(createChaser(state));
     }
   }
 
+  for (const enemy of state.enemies) {
+    enemy.angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+    enemy.x += Math.cos(enemy.angle) * chaser.speed * dt;
+    enemy.y += Math.sin(enemy.angle) * chaser.speed * dt;
+
+    for (const island of state.islands) {
+      const pushed = pushOutOfCircle(
+        { x: enemy.x, y: enemy.y, radius: chaser.radius },
+        island,
+      );
+      enemy.x = pushed.x;
+      enemy.y = pushed.y;
+    }
+  }
+}

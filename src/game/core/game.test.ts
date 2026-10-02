@@ -207,4 +207,27 @@ it("moves a chaser toward the player", () => {
   const enemy = state.enemies[0];
   const after = Math.hypot(state.player.x - enemy.x, state.player.y - enemy.y);
   expect(after).toBeLessThan(before);
-});
+  });
+  
+  it("damages an enemy and removes the projectile that hit it", () => {
+    const state = createGameState();
+    const input = new GameInput();
+    state.enemies.push({ x: 100, y: 100, angle: 0, hp: 30 });
+    state.projectiles.push({ x: 100, y: 100, vx: 0, vy: 0, timeLeft: 1 });
+
+    updateGame(state, 0.01, input);
+
+    expect(state.projectiles).toHaveLength(0);
+    expect(state.enemies[0].hp).toBe(30 - gameConfig.projectile.damage);
+  });
+
+  it("removes an enemy when its hp reaches zero", () => {
+    const state = createGameState();
+    const input = new GameInput();
+    state.enemies.push({ x: 100, y: 100, angle: 0, hp: gameConfig.projectile.damage });
+    state.projectiles.push({ x: 100, y: 100, vx: 0, vy: 0, timeLeft: 1 });
+
+    updateGame(state, 0.01, input);
+
+    expect(state.enemies).toHaveLength(0);
+  });

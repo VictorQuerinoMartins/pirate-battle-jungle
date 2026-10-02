@@ -12,6 +12,7 @@ import type { MatchResult } from "../matchResult";
 import type { GameOptions } from "../../game/core/options";
 
 const ASSETS = `${import.meta.env.BASE_URL}assets/`;
+const LOAD_STEPS = 3; // renderer started, ship atlas, tile sheet
 
 export function GameScreen({
   options,
@@ -31,6 +32,19 @@ export function GameScreen({
   const loopRef = useRef<GameLoop | null>(null);
   const inputRef = useRef<GameInput | null>(null);
 
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">(
+    "loading",
+  );
+  const [loaded, setLoaded] = useState(0);
+  const [attempt, setAttempt] = useState(0);
+
+  // Starts the loading again: the main effect runs once more.
+  function retry() {
+    setLoaded(0);
+    setLoadState("loading");
+    setAttempt((count) => count + 1);
+  }
+
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
@@ -42,6 +56,12 @@ export function GameScreen({
     let loop: GameLoop | null = null;
     let initialized = false;
     let disposed = false;
+
+    // Each finished download moves the progress bar one step.
+    function step<T>(value: T): T {
+      if (!disposed) setLoaded((count) => count + 1);
+      return value;
+    }
 
     async function start() {
       await app.init({
@@ -57,12 +77,14 @@ export function GameScreen({
         return;
       }
 
+      setLoaded(1);
+
       const [textures, tileSheet] = await Promise.all([
         loadXmlAtlas(
           `${ASSETS}spritesheet/ships_miscellaneous_sheet.png`,
           `${ASSETS}spritesheet/ships_miscellaneous_sheet.xml`,
-        ),
-        loadImage(`${ASSETS}tilesheet/tiles_sheet.png`),
+        ).then(step),
+        loadImage(`${ASSETS}tilesheet/tiles_sheet.png`).then(step),
       ]);
       if (disposed) return;
 
@@ -111,10 +133,12 @@ export function GameScreen({
 
       loop.start();
       loopRef.current = loop;
+      setLoadState("ready");
     }
 
     start().catch((error: unknown) => {
       console.error(error);
+      if (!disposed) setLoadState("error");
     });
 
     return () => {
@@ -124,7 +148,7 @@ export function GameScreen({
       inputRef.current = null;
       if (initialized) app.destroy(true, { children: true });
     };
-  }, [onFinish, options]);
+  }, [onFinish, options, attempt]);
 
   // Pause or resume the game loop whenever `paused` changes. While paused the
   // input forgets held keys and ignores new ones, so nothing pressed during
@@ -160,7 +184,49 @@ export function GameScreen({
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
       <div ref={hostRef} style={{ width: "100%", height: "100%" }} />
-      <Hud data={hud} />
+      {loadState === "ready" && <Hud data={hud} />}
+      {loadState === "loading" && (
+        <div
+          role="status"
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            color: "#fff",
+          }}
+        >
+          <p style={{ margin: 0 }}>Loading game...</p>
+          <progress
+            value={loaded}
+            max={LOAD_STEPS}
+            aria-label="Loading progress"
+          />
+        </div>
+      )}
+      {loadState === "error" && (
+        <div
+          role="alert"
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 12,
+            color: "#fff",
+          }}
+        >
+          <p style={{ margin: 0 }}>Could not load the game assets.</p>
+          <button type="button" onClick={retry}>
+            Try again
+          </button>
+        </div>
+      )}
       {paused && <PauseMenu onResume={() => setPaused(false)} />}
     </div>
   );

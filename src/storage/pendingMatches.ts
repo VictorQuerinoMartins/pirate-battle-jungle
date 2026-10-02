@@ -42,3 +42,7 @@ export function removePendingMatch(id: string, storage?: PendingStorage): void {
     storage,
   );
 }
+
+export function clearPendingMatches(storage?: PendingStorage): void {
+  savePendingMatches([], storage);
+}

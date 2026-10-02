@@ -4,6 +4,7 @@ import { loadPlayerId } from "../../storage/playerId";
 import { HistoryPanel } from "../components/HistoryPanel";
 import { RankingPanel } from "../components/RankingPanel";
 import { ControlsHelp } from "../components/ControlsHelp";
+import { ScenarioPanel } from "../components/ScenarioPanel";
 
 interface MenuScreenProps {
   options: GameOptions;
@@ -71,6 +72,7 @@ export function MenuScreen({ options, onPlay, onOptions }: MenuScreenProps) {
           <HistoryPanel playerId={playerId} />
         )}
       </div>
+      <ScenarioPanel />
     </div>
   );
 }

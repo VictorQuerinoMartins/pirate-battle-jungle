@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { gameConfig } from "../config/gameConfig";
 import { GameInput } from "../input/gameInput";
-import { createGameState, updateGame } from "./game";
+import { createGameState, findSpawnPoint, updateGame } from "./game";
 
 const { speed, rotationSpeed, radius } = gameConfig.player;
 
@@ -199,7 +199,14 @@ it("never spawns more than the maximum number of enemies", () => {
 it("moves a chaser toward the player", () => {
   const state = createGameState();
   const input = new GameInput();
-  state.enemies.push({ x: 100, y: 100, angle: 0, hp: 30 });
+  state.enemies.push({
+    kind: "chaser",
+    cooldown: 0,
+    x: 100,
+    y: 100,
+    angle: 0,
+    hp: 30,
+  });
   const before = Math.hypot(state.player.x - 100, state.player.y - 100);
 
   updateGame(state, 0.1, input);
@@ -212,7 +219,14 @@ it("moves a chaser toward the player", () => {
 it("damages an enemy and removes the projectile that hit it", () => {
   const state = createGameState();
   const input = new GameInput();
-  state.enemies.push({ x: 100, y: 100, angle: 0, hp: 30 });
+  state.enemies.push({
+    kind: "chaser",
+    cooldown: 0,
+    x: 100,
+    y: 100,
+    angle: 0,
+    hp: 30,
+  });
   state.projectiles.push({ x: 100, y: 100, vx: 0, vy: 0, timeLeft: 1 });
 
   updateGame(state, 0.01, input);
@@ -225,6 +239,8 @@ it("removes an enemy when its hp reaches zero", () => {
   const state = createGameState();
   const input = new GameInput();
   state.enemies.push({
+    kind: "chaser",
+    cooldown: 0,
     x: 100,
     y: 100,
     angle: 0,
@@ -241,7 +257,7 @@ it("damages the player when an enemy touches the ship", () => {
   const state = createGameState();
   const input = new GameInput();
   const { x, y } = state.player;
-  state.enemies.push({ x, y, angle: 0, hp: 30 });
+  state.enemies.push({ kind: "chaser", cooldown: 0, x, y, angle: 0, hp: 30 });
 
   updateGame(state, 0.01, input);
 
@@ -256,7 +272,7 @@ it("never lets the player hp go below zero", () => {
   const input = new GameInput();
   state.player.hp = 3;
   const { x, y } = state.player;
-  state.enemies.push({ x, y, angle: 0, hp: 30 });
+  state.enemies.push({ kind: "chaser", cooldown: 0, x, y, angle: 0, hp: 30 });
 
   updateGame(state, 0.01, input);
 
@@ -267,6 +283,8 @@ it("gives points for each destroyed enemy", () => {
   const state = createGameState();
   const input = new GameInput();
   state.enemies.push({
+    kind: "chaser",
+    cooldown: 0,
     x: 100,
     y: 100,
     angle: 0,
@@ -323,4 +341,138 @@ it("uses the given options for the match length and the spawn interval", () => {
   updateGame(state, 1.01, input);
 
   expect(state.enemies).toHaveLength(1);
+});
+
+it("fires three parallel projectiles with a broadside", () => {
+  const state = createGameState();
+  const input = new GameInput();
+  input.press("fireLeft");
+
+  updateGame(state, 0.01, input);
+
+  expect(state.projectiles).toHaveLength(
+    gameConfig.player.broadsideProjectiles,
+  );
+  const [first, ...others] = state.projectiles;
+  for (const projectile of others) {
+    expect(projectile.vx).toBeCloseTo(first.vx);
+    expect(projectile.vy).toBeCloseTo(first.vy);
+  }
+});
+
+it("gives each weapon its own cooldown", () => {
+  const state = createGameState();
+  const input = new GameInput();
+
+  input.press("fireFront");
+  updateGame(state, 0.01, input);
+  input.press("fireLeft");
+  updateGame(state, 0.01, input);
+
+  expect(state.projectiles).toHaveLength(
+    1 + gameConfig.player.broadsideProjectiles,
+  );
+});
+
+it("only picks spawn points that are free of islands and far from the player", () => {
+  const state = createGameState();
+  state.player.x = 100;
+  state.player.y = 360;
+
+  for (let i = 0; i < 100; i++) {
+    const point = findSpawnPoint(state);
+    if (!point) continue;
+
+    const distance = Math.hypot(
+      point.x - state.player.x,
+      point.y - state.player.y,
+    );
+    expect(distance).toBeGreaterThanOrEqual(
+      gameConfig.spawn.minDistanceFromPlayer,
+    );
+    for (const island of state.islands) {
+      const gap = Math.hypot(point.x - island.x, point.y - island.y);
+      expect(gap).toBeGreaterThanOrEqual(
+        island.radius + gameConfig.chaser.radius,
+      );
+    }
+  }
+});
+
+it("returns no spawn point when every place is blocked", () => {
+  const state = createGameState();
+  state.islands = [{ x: 640, y: 360, radius: 5000 }];
+
+  expect(findSpawnPoint(state)).toBeNull();
+});
+it("makes a shooter stop and fire when the player is in range", () => {
+  const state = createGameState();
+  state.spawnInterval = 999;
+  state.enemies.push({
+    kind: "shooter",
+    cooldown: 0,
+    x: 440,
+    y: 360,
+    angle: 0,
+    hp: gameConfig.shooter.maxHp,
+  });
+
+  updateGame(state, 0.016, new GameInput());
+
+  expect(state.enemyProjectiles).toHaveLength(1);
+  expect(state.enemies[0]?.x).toBe(440);
+});
+
+it("makes a shooter approach without firing when the player is far away", () => {
+  const state = createGameState();
+  state.spawnInterval = 999;
+  state.enemies.push({
+    kind: "shooter",
+    cooldown: 0,
+    x: 50,
+    y: 360,
+    angle: 0,
+    hp: gameConfig.shooter.maxHp,
+  });
+
+  updateGame(state, 0.016, new GameInput());
+
+  expect(state.enemies[0]?.x).toBeGreaterThan(50);
+  expect(state.enemyProjectiles).toHaveLength(0);
+});
+
+it("never makes a chaser fire", () => {
+  const state = createGameState();
+  state.spawnInterval = 999;
+  state.enemies.push({
+    kind: "chaser",
+    cooldown: 0,
+    x: 440,
+    y: 360,
+    angle: 0,
+    hp: gameConfig.chaser.maxHp,
+  });
+
+  updateGame(state, 0.016, new GameInput());
+
+  expect(state.enemyProjectiles).toHaveLength(0);
+});
+
+it("damages the player when an enemy shot hits the ship", () => {
+  const state = createGameState();
+  state.spawnInterval = 999;
+  state.enemyProjectiles.push({
+    x: state.player.x,
+    y: state.player.y,
+    vx: 0,
+    vy: 0,
+    timeLeft: 1,
+  });
+
+  updateGame(state, 0.016, new GameInput());
+
+  expect(state.player.hp).toBe(
+    gameConfig.player.maxHp - gameConfig.shooter.shotDamage,
+  );
+  expect(state.enemyProjectiles).toHaveLength(0);
 });

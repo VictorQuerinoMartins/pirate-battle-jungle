@@ -17,6 +17,12 @@ const SHALLOW_COLOR = 0xb8efff;
 const SHALLOW_WIDTH = 14;
 const PROJECTILE_RADIUS = 4;
 const PROJECTILE_COLOR = 0x2b2b2b;
+const ENEMY_PROJECTILE_COLOR = 0xd9381e;
+const HEALTH_BAR_WIDTH = 40;
+const HEALTH_BAR_HEIGHT = 5;
+const HEALTH_BAR_OFFSET = 34;
+const HEALTH_BAR_BACK_COLOR = 0x3a3a3a;
+const HEALTH_BAR_COLOR = 0x4ec24e;
 
 export class Renderer {
   private readonly app: Application;
@@ -26,6 +32,7 @@ export class Renderer {
   private readonly projectileGraphics = new Graphics();
   private readonly enemyLayer = new Container();
   private readonly enemySprites: Sprite[] = [];
+  private readonly healthGraphics = new Graphics();
 
   constructor(
     app: Application,
@@ -64,6 +71,7 @@ export class Renderer {
       this.projectileGraphics,
       this.enemyLayer,
       this.playerSprite,
+      this.healthGraphics,
     );
     this.render(state);
   }
@@ -86,7 +94,23 @@ export class Renderer {
         .circle(projectile.x, projectile.y, PROJECTILE_RADIUS)
         .fill(PROJECTILE_COLOR);
     }
+    for (const projectile of state.enemyProjectiles) {
+      this.projectileGraphics
+        .circle(projectile.x, projectile.y, PROJECTILE_RADIUS)
+        .fill(ENEMY_PROJECTILE_COLOR);
+    }
     this.drawEnemies(state);
+
+    this.healthGraphics.clear();
+    this.drawHealthBar(player.x, player.y, player.hp, gameConfig.player.maxHp);
+    for (const enemy of state.enemies) {
+      this.drawHealthBar(
+        enemy.x,
+        enemy.y,
+        enemy.hp,
+        gameConfig[enemy.kind].maxHp,
+      );
+    }
     this.app.render();
   }
 
@@ -105,11 +129,24 @@ export class Renderer {
     for (let i = 0; i < state.enemies.length; i++) {
       const enemy = state.enemies[i];
       const sprite = this.enemySprites[i];
-      const level = damageLevelFor(enemy.hp, gameConfig.chaser.maxHp);
-      sprite.texture = this.shipTexture("black", level);
+      const color: ShipColor = enemy.kind === "shooter" ? "yellow" : "black";
+      const level = damageLevelFor(enemy.hp, gameConfig[enemy.kind].maxHp);
+      sprite.texture = this.shipTexture(color, level);
       sprite.position.set(enemy.x, enemy.y);
       sprite.rotation = enemy.angle + SPRITE_ROTATION_OFFSET;
     }
+  }
+
+  private drawHealthBar(x: number, y: number, hp: number, maxHp: number): void {
+    const ratio = Math.max(0, hp) / maxHp;
+    const left = x - HEALTH_BAR_WIDTH / 2;
+    const top = y - HEALTH_BAR_OFFSET;
+
+    this.healthGraphics
+      .rect(left, top, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT)
+      .fill(HEALTH_BAR_BACK_COLOR)
+      .rect(left, top, HEALTH_BAR_WIDTH * ratio, HEALTH_BAR_HEIGHT)
+      .fill(HEALTH_BAR_COLOR);
   }
 
   private shipTexture(color: ShipColor, level: DamageLevel): Texture {

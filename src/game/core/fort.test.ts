@@ -9,6 +9,8 @@ function quietState(score: number): GameState {
   const state = createGameState(1);
   state.score = score;
   state.spawnInterval = 1000; // no enemy gets in the way
+  state.player.x = 500; // in the open sea, inside the fort's range
+  state.player.y = 200;
   return state;
 }
 

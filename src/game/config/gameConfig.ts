@@ -1,9 +1,9 @@
-import type { Circle } from "../core/geometry";
+import type { Island } from "../core/geometry";
 export interface GameConfig {
   readonly arena: {
     readonly width: number;
     readonly height: number;
-    readonly islands: readonly Circle[];
+    readonly islands: readonly Island[];
   };
 
   readonly match: {
@@ -50,6 +50,8 @@ export interface GameConfig {
 
   readonly fort: {
     readonly islandIndex: number; // which island the fort stands on
+    readonly x: number; // center of the fort
+    readonly y: number;
     readonly unlockScore: number;
     readonly range: number;
     readonly fireCooldownMs: number;
@@ -63,10 +65,17 @@ export const gameConfig: GameConfig = {
   arena: {
     width: 1280,
     height: 720,
+    // Blocks of land, each one surrounded by water. An L shape is two
+    // rectangles that touch.
     islands: [
-      { x: 300, y: 200, radius: 118 },
-      { x: 900, y: 260, radius: 143 },
-      { x: 640, y: 560, radius: 104 },
+      { rects: [{ x: 90, y: 60, width: 320, height: 240 }] },
+      {
+        rects: [
+          { x: 880, y: 140, width: 300, height: 130 },
+          { x: 1000, y: 250, width: 180, height: 140 },
+        ],
+      },
+      { rects: [{ x: 460, y: 500, width: 320, height: 170 }] },
     ],
   },
   match: { durationSeconds: 120, scorePerKill: 1 },
@@ -100,6 +109,8 @@ export const gameConfig: GameConfig = {
 
   fort: {
     islandIndex: 0,
+    x: 210,
+    y: 180,
     unlockScore: 5,
     range: 460,
     fireCooldownMs: 3000,

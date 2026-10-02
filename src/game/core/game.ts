@@ -1,9 +1,11 @@
 import { gameConfig } from "../config/gameConfig";
 import type { Action, GameInput } from "../input/gameInput";
 import {
+  circleOverlapsIsland,
   circlesOverlap,
-  pushOutOfCircle,
-  type Circle,
+  pointInIsland,
+  pushOutOfIsland,
+  type Island,
   type Point,
 } from "./geometry";
 import { createRng } from "./rng";
@@ -66,7 +68,7 @@ export type GameEvent =
 
 export interface GameState {
   player: PlayerState;
-  islands: readonly Circle[];
+  islands: readonly Island[];
   projectiles: ProjectileState[]; 
   enemyProjectiles: ProjectileState[];
   enemies: EnemyState[];
@@ -85,7 +87,7 @@ export function createGameState(
   options: GameOptions = defaultOptions,
 ): GameState {
   const { arena, player } = gameConfig;
-  const fortIsland = arena.islands[gameConfig.fort.islandIndex];
+  const { fort } = gameConfig;
   return {
     player: {
       x: arena.width / 2,
@@ -106,12 +108,9 @@ export function createGameState(
     status: "playing",
     events: [],
     fort: {
-      x: fortIsland.x,
-      y: fortIsland.y,
-      angle: Math.atan2(
-        arena.height / 2 - fortIsland.y,
-        arena.width / 2 - fortIsland.x,
-      ),
+      x: fort.x,
+      y: fort.y,
+      angle: Math.atan2(arena.height / 2 - fort.y, arena.width / 2 - fort.x),
       cooldown: 0,
       active: false,
     },
@@ -138,7 +137,7 @@ export function updateGame(
   }
 
   for (const island of state.islands) {
-    const pushed = pushOutOfCircle(
+    const pushed = pushOutOfIsland(
       { x: player.x, y: player.y, radius: config.radius },
       island,
     );
@@ -326,7 +325,7 @@ function advanceProjectiles(
     const hitsIsland = state.islands.some(
       (island, index) =>
         index !== p.ignoreIsland &&
-        circlesOverlap({ x: p.x, y: p.y, radius: 0 }, island),
+        pointInIsland(p, island),
     );
     return p.timeLeft > 0 && insideArena && !hitsIsland;
   });
@@ -356,7 +355,7 @@ export function findSpawnPoint(state: GameState): Point | null {
       Math.hypot(point.x - state.player.x, point.y - state.player.y) >=
       spawn.minDistanceFromPlayer;
     const freeOfIslands = !state.islands.some((island) =>
-      circlesOverlap({ ...point, radius: chaser.radius }, island),
+      circleOverlapsIsland({ ...point, radius: chaser.radius }, island),
     );
     if (farFromPlayer && freeOfIslands) return point;
   }
@@ -392,7 +391,7 @@ function updateEnemies(state: GameState, dt: number): void {
     }
 
     for (const island of state.islands) {
-      const pushed = pushOutOfCircle(
+      const pushed = pushOutOfIsland(
         { x: enemy.x, y: enemy.y, radius: stats.radius },
         island,
       );

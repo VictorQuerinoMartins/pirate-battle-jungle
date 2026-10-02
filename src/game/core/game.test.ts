@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { gameConfig } from "../config/gameConfig";
 import { GameInput } from "../input/gameInput";
 import { createGameState, findSpawnPoint, updateGame } from "./game";
+import { circleOverlapsIsland } from "./geometry";
 
 const { speed, rotationSpeed, radius } = gameConfig.player;
 
@@ -68,20 +69,16 @@ describe("updateGame", () => {
   it("does not let the ship enter an island", () => {
     const state = createGameState();
     const input = new GameInput();
-    const island = state.islands[0];
+    const top = state.islands[2].rects[0].y;
 
-    state.player.x = island.x + island.radius + 100;
-    state.player.y = island.y;
-    state.player.angle = Math.PI;
+    state.player.x = 600;
+    state.player.y = top - 100;
+    state.player.angle = Math.PI / 2; // facing down, toward the island
     input.press("forward");
 
     for (let i = 0; i < 200; i++) updateGame(state, 0.05, input);
 
-    const distance = Math.hypot(
-      state.player.x - island.x,
-      state.player.y - island.y,
-    );
-    expect(distance).toBeGreaterThanOrEqual(radius + island.radius - 0.001);
+    expect(state.player.y).toBeLessThanOrEqual(top - radius + 0.001);
   });
 
   it("fires a projectile in the facing direction when fireFront is pressed", () => {
@@ -121,10 +118,10 @@ describe("updateGame", () => {
   it("removes a projectile that hits an island", () => {
     const state = createGameState();
     const input = new GameInput();
-    const island = state.islands[0];
+    const rect = state.islands[0].rects[0];
     state.projectiles.push({
-      x: island.x,
-      y: island.y,
+      x: rect.x + rect.width / 2,
+      y: rect.y + rect.height / 2,
       vx: 0,
       vy: 0,
       timeLeft: 1,
@@ -202,12 +199,12 @@ it("moves a chaser toward the player", () => {
   state.enemies.push({
     kind: "chaser",
     cooldown: 0,
-    x: 100,
-    y: 100,
+    x: 500,
+    y: 300,
     angle: 0,
     hp: 30,
   });
-  const before = Math.hypot(state.player.x - 100, state.player.y - 100);
+  const before = Math.hypot(state.player.x - 500, state.player.y - 300);
 
   updateGame(state, 0.1, input);
 
@@ -222,12 +219,12 @@ it("damages an enemy and removes the projectile that hit it", () => {
   state.enemies.push({
     kind: "chaser",
     cooldown: 0,
-    x: 100,
-    y: 100,
+    x: 500,
+    y: 300,
     angle: 0,
     hp: 30,
   });
-  state.projectiles.push({ x: 100, y: 100, vx: 0, vy: 0, timeLeft: 1 });
+  state.projectiles.push({ x: 500, y: 300, vx: 0, vy: 0, timeLeft: 1 });
 
   updateGame(state, 0.01, input);
 
@@ -241,12 +238,12 @@ it("removes an enemy when its hp reaches zero", () => {
   state.enemies.push({
     kind: "chaser",
     cooldown: 0,
-    x: 100,
-    y: 100,
+    x: 500,
+    y: 300,
     angle: 0,
     hp: gameConfig.projectile.damage,
   });
-  state.projectiles.push({ x: 100, y: 100, vx: 0, vy: 0, timeLeft: 1 });
+  state.projectiles.push({ x: 500, y: 300, vx: 0, vy: 0, timeLeft: 1 });
 
   updateGame(state, 0.01, input);
 
@@ -285,12 +282,12 @@ it("gives points for each destroyed enemy", () => {
   state.enemies.push({
     kind: "chaser",
     cooldown: 0,
-    x: 100,
-    y: 100,
+    x: 500,
+    y: 300,
     angle: 0,
     hp: gameConfig.projectile.damage,
   });
-  state.projectiles.push({ x: 100, y: 100, vx: 0, vy: 0, timeLeft: 1 });
+  state.projectiles.push({ x: 500, y: 300, vx: 0, vy: 0, timeLeft: 1 });
 
   updateGame(state, 0.01, input);
 
@@ -391,17 +388,21 @@ it("only picks spawn points that are free of islands and far from the player", (
       gameConfig.spawn.minDistanceFromPlayer,
     );
     for (const island of state.islands) {
-      const gap = Math.hypot(point.x - island.x, point.y - island.y);
-      expect(gap).toBeGreaterThanOrEqual(
-        island.radius + gameConfig.chaser.radius,
-      );
+      expect(
+        circleOverlapsIsland(
+          { ...point, radius: gameConfig.chaser.radius },
+          island,
+        ),
+      ).toBe(false);
     }
   }
 });
 
 it("returns no spawn point when every place is blocked", () => {
   const state = createGameState();
-  state.islands = [{ x: 640, y: 360, radius: 5000 }];
+  state.islands = [
+    { rects: [{ x: -10, y: -10, width: 2000, height: 2000 }] },
+  ];
 
   expect(findSpawnPoint(state)).toBeNull();
 });

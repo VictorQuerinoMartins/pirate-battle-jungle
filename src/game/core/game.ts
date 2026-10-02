@@ -32,6 +32,8 @@ export interface EnemyState {
   hp: number;
 }
 
+export type GameStatus = "playing" | "over";
+
 export interface GameState {
   player: PlayerState;
   islands: readonly Circle[];
@@ -39,6 +41,9 @@ export interface GameState {
   enemies: EnemyState[];
   spawnTimer: number;
   random: () => number;
+  score: number;
+  timeLeft: number;
+  status: GameStatus;
 }
 
 export function createGameState(seed = 1): GameState {
@@ -51,11 +56,14 @@ export function createGameState(seed = 1): GameState {
       hp: player.maxHp,
       fireCooldown: 0,
     },
-    islands: arena.islands,
+        islands: arena.islands,
     projectiles: [],
     enemies: [],
     spawnTimer: 0,
     random: createRng(seed),
+    score: 0,
+    timeLeft: gameConfig.match.durationSeconds,
+    status: "playing",
   };
 }
 
@@ -64,6 +72,7 @@ export function updateGame(
   dt: number,
   input: GameInput,
 ): void {
+  if (state.status !== "playing") return; 
   const { arena, player: config } = gameConfig;
   const player = state.player;
 
@@ -100,11 +109,14 @@ export function updateGame(
     }
   }
 
-    updateProjectiles(state, dt);
+  updateProjectiles(state, dt);
   hitEnemies(state);
   updateEnemies(state, dt);
-}
+  enemiesHitPlayer(state);
 
+  state.timeLeft = Math.max(0, state.timeLeft - dt);
+  if (state.timeLeft === 0 || player.hp === 0) state.status = "over";
+}
 
 function hitEnemies(state: GameState): void {
   const { chaser, projectile: projectileConfig } = gameConfig;
@@ -116,13 +128,32 @@ function hitEnemies(state: GameState): void {
         { x: enemy.x, y: enemy.y, radius: chaser.radius },
       ),
     );
-    if (!target) return true; // hit nothing: the projectile keeps flying
+    if (!target) return true;
 
     target.hp -= projectileConfig.damage;
-    return false; // hit an enemy: the projectile is gone
+    return false;
   });
 
+  const before = state.enemies.length;
   state.enemies = state.enemies.filter((enemy) => enemy.hp > 0);
+  state.score +=
+    (before - state.enemies.length) * gameConfig.match.scorePerKill;
+}
+
+function enemiesHitPlayer(state: GameState): void {
+  const { chaser, player: playerConfig } = gameConfig;
+  const player = state.player;
+
+  state.enemies = state.enemies.filter((enemy) => {
+    const touching = circlesOverlap(
+      { x: enemy.x, y: enemy.y, radius: chaser.radius },
+      { x: player.x, y: player.y, radius: playerConfig.radius },
+    );
+    if (touching) {
+      player.hp = Math.max(0, player.hp - chaser.contactDamage);
+    }
+    return !touching; // an enemy that crashed into the ship disappears
+  });
 }
 
 function clamp(value: number, min: number, max: number): number {

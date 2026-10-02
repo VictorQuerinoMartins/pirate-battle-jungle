@@ -6,7 +6,10 @@ export interface GameConfig {
     readonly islands: readonly Circle[];
   };
 
-  readonly match: { readonly durationSeconds: number };
+    readonly match: {
+    readonly durationSeconds: number;
+    readonly scorePerKill: number;
+  };
 
   readonly player: {
     readonly maxHp: number;
@@ -47,7 +50,7 @@ export const gameConfig: GameConfig = {
       { x: 640, y: 560, radius: 80 },
     ],
   },
-  match: { durationSeconds: 120 },
+    match: { durationSeconds: 120, scorePerKill: 100 },
   player: { maxHp: 100, speed: 220, rotationSpeed: 3, radius: 20, fireCooldownMs: 400 },
   projectile: { speed: 500, damage: 10, lifetimeMs: 1500 },
   chaser: { maxHp: 30, speed: 110, contactDamage: 10, radius: 20 },

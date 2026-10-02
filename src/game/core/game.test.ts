@@ -207,27 +207,102 @@ it("moves a chaser toward the player", () => {
   const enemy = state.enemies[0];
   const after = Math.hypot(state.player.x - enemy.x, state.player.y - enemy.y);
   expect(after).toBeLessThan(before);
+});
+
+it("damages an enemy and removes the projectile that hit it", () => {
+  const state = createGameState();
+  const input = new GameInput();
+  state.enemies.push({ x: 100, y: 100, angle: 0, hp: 30 });
+  state.projectiles.push({ x: 100, y: 100, vx: 0, vy: 0, timeLeft: 1 });
+
+  updateGame(state, 0.01, input);
+
+  expect(state.projectiles).toHaveLength(0);
+  expect(state.enemies[0].hp).toBe(30 - gameConfig.projectile.damage);
+});
+
+it("removes an enemy when its hp reaches zero", () => {
+  const state = createGameState();
+  const input = new GameInput();
+  state.enemies.push({
+    x: 100,
+    y: 100,
+    angle: 0,
+    hp: gameConfig.projectile.damage,
   });
-  
-  it("damages an enemy and removes the projectile that hit it", () => {
-    const state = createGameState();
-    const input = new GameInput();
-    state.enemies.push({ x: 100, y: 100, angle: 0, hp: 30 });
-    state.projectiles.push({ x: 100, y: 100, vx: 0, vy: 0, timeLeft: 1 });
+  state.projectiles.push({ x: 100, y: 100, vx: 0, vy: 0, timeLeft: 1 });
 
-    updateGame(state, 0.01, input);
+  updateGame(state, 0.01, input);
 
-    expect(state.projectiles).toHaveLength(0);
-    expect(state.enemies[0].hp).toBe(30 - gameConfig.projectile.damage);
-  });
+  expect(state.enemies).toHaveLength(0);
+});
 
-  it("removes an enemy when its hp reaches zero", () => {
-    const state = createGameState();
-    const input = new GameInput();
-    state.enemies.push({ x: 100, y: 100, angle: 0, hp: gameConfig.projectile.damage });
-    state.projectiles.push({ x: 100, y: 100, vx: 0, vy: 0, timeLeft: 1 });
+it("damages the player when an enemy touches the ship", () => {
+  const state = createGameState();
+  const input = new GameInput();
+  const { x, y } = state.player;
+  state.enemies.push({ x, y, angle: 0, hp: 30 });
 
-    updateGame(state, 0.01, input);
+  updateGame(state, 0.01, input);
 
-    expect(state.enemies).toHaveLength(0);
-  });
+  expect(state.player.hp).toBe(
+    gameConfig.player.maxHp - gameConfig.chaser.contactDamage,
+  );
+  expect(state.enemies).toHaveLength(0);
+});
+
+it("never lets the player hp go below zero", () => {
+  const state = createGameState();
+  const input = new GameInput();
+  state.player.hp = 3;
+  const { x, y } = state.player;
+  state.enemies.push({ x, y, angle: 0, hp: 30 });
+
+  updateGame(state, 0.01, input);
+
+  expect(state.player.hp).toBe(0);
+});
+
+
+it("gives points for each destroyed enemy", () => {
+  const state = createGameState();
+  const input = new GameInput();
+  state.enemies.push({ x: 100, y: 100, angle: 0, hp: gameConfig.projectile.damage });
+  state.projectiles.push({ x: 100, y: 100, vx: 0, vy: 0, timeLeft: 1 });
+
+  updateGame(state, 0.01, input);
+
+  expect(state.score).toBe(gameConfig.match.scorePerKill);
+});
+
+it("ends the match when the time runs out", () => {
+  const state = createGameState();
+  const input = new GameInput();
+
+  updateGame(state, gameConfig.match.durationSeconds + 1, input);
+
+  expect(state.timeLeft).toBe(0);
+  expect(state.status).toBe("over");
+});
+
+it("ends the match when the player has no hp left", () => {
+  const state = createGameState();
+  const input = new GameInput();
+  state.player.hp = 0;
+
+  updateGame(state, 0.01, input);
+
+  expect(state.status).toBe("over");
+});
+
+it("stops updating after the match is over", () => {
+  const state = createGameState();
+  const input = new GameInput();
+  state.status = "over";
+  input.press("forward");
+  const startY = state.player.y;
+
+  updateGame(state, 0.5, input);
+
+  expect(state.player.y).toBe(startY);
+});

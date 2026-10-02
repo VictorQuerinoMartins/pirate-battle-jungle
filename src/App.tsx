@@ -46,11 +46,10 @@ export default function App() {
         />
       );
     case "menu":
-      return (
-        <MenuScreen
+              <MenuScreen
+          options={options}
           onPlay={() => setScreen({ name: "game" })}
           onOptions={() => setScreen({ name: "options" })}
         />
-      );
   }
 }

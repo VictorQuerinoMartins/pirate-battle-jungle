@@ -1,9 +1,13 @@
+import type { GameOptions } from "../../game/core/options";
+import { RankingPanel } from "../components/RankingPanel";
+
 interface MenuScreenProps {
+  options: GameOptions;
   onPlay: () => void;
   onOptions: () => void;
 }
 
-export function MenuScreen({ onPlay, onOptions }: MenuScreenProps) {
+export function MenuScreen({ options, onPlay, onOptions }: MenuScreenProps) {
   const buttonStyle = { padding: "10px 28px", fontSize: 18, cursor: "pointer" };
 
   return (
@@ -17,6 +21,7 @@ export function MenuScreen({ onPlay, onOptions }: MenuScreenProps) {
         gap: 16,
         background: "#102a43",
         color: "#fff",
+        overflowY: "auto",
       }}
     >
       <h1 style={{ margin: 0 }}>Pirate Battle</h1>
@@ -26,6 +31,7 @@ export function MenuScreen({ onPlay, onOptions }: MenuScreenProps) {
       <button type="button" onClick={onOptions} style={buttonStyle}>
         Options
       </button>
+      <RankingPanel options={options} />
     </div>
   );
 }

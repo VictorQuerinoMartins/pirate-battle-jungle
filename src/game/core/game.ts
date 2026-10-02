@@ -49,6 +49,10 @@ export interface EnemyState {
 }
 
 export type GameStatus = "playing" | "over";
+export type GameEvent =
+  | { type: "shot"; x: number; y: number }
+  | { type: "hit"; x: number; y: number }
+  | { type: "explosion"; x: number; y: number; size: "small" | "large" };
 
 export interface GameState {
   player: PlayerState;
@@ -62,6 +66,7 @@ export interface GameState {
   score: number;
   timeLeft: number;
   status: GameStatus;
+  events: GameEvent[];
 }
 
 export function createGameState(
@@ -87,6 +92,7 @@ export function createGameState(
     score: 0,
     timeLeft: options.durationSeconds,
     status: "playing",
+    events: [],
   };
 }
 
@@ -95,6 +101,7 @@ export function updateGame(
   dt: number,
   input: GameInput,
 ): void {
+  state.events = [];
   if (state.status !== "playing") return;
   const { arena, player: config } = gameConfig;
   const player = state.player;
@@ -141,6 +148,11 @@ export function updateGame(
         Math.sin(angle + Math.PI / 2) * spread;
       state.projectiles.push(createProjectile(startX, startY, angle));
     }
+    state.events.push({
+      type: "shot",
+      x: player.x + Math.cos(angle) * config.radius,
+      y: player.y + Math.sin(angle) * config.radius,
+    });
 
     cooldowns[shot.weapon] =
       (isBroadside ? config.broadsideCooldownMs : config.fireCooldownMs) / 1000;
@@ -158,6 +170,14 @@ export function updateGame(
   enemyShotsHitPlayer(state);
 
   state.timeLeft = Math.max(0, state.timeLeft - dt);
+  if (player.hp === 0) {
+    state.events.push({
+      type: "explosion",
+      x: player.x,
+      y: player.y,
+      size: "large",
+    });
+  }
   if (state.timeLeft === 0 || player.hp === 0) state.status = "over";
 }
 
@@ -179,9 +199,20 @@ function hitEnemies(state: GameState): void {
     if (!target) return true;
 
     target.hp -= projectileConfig.damage;
+    state.events.push({ type: "hit", x: p.x, y: p.y });
     return false;
   });
 
+  for (const enemy of state.enemies) {
+    if (enemy.hp <= 0) {
+      state.events.push({
+        type: "explosion",
+        x: enemy.x,
+        y: enemy.y,
+        size: "small",
+      });
+    }
+  }
   const before = state.enemies.length;
   state.enemies = state.enemies.filter((enemy) => enemy.hp > 0);
   state.score +=
@@ -200,6 +231,12 @@ function enemiesHitPlayer(state: GameState): void {
     );
     if (touching) {
       player.hp = Math.max(0, player.hp - stats.contactDamage);
+      state.events.push({
+        type: "explosion",
+        x: enemy.x,
+        y: enemy.y,
+        size: "small",
+      });
     }
     return !touching; // an enemy that crashed into the ship disappears
   });
@@ -216,6 +253,7 @@ function enemyShotsHitPlayer(state: GameState): void {
     );
     if (hit) {
       player.hp = Math.max(0, player.hp - shooter.shotDamage);
+      state.events.push({ type: "hit", x: p.x, y: p.y });
     }
     return !hit; // a shot that hit the ship disappears
   });
@@ -343,6 +381,11 @@ function updateEnemies(state: GameState, dt: number): void {
             enemy.angle,
           ),
         );
+        state.events.push({
+          type: "shot",
+          x: enemy.x + Math.cos(enemy.angle) * stats.radius,
+          y: enemy.y + Math.sin(enemy.angle) * stats.radius,
+        });
         enemy.cooldown = shooter.fireCooldownMs / 1000;
       }
     }

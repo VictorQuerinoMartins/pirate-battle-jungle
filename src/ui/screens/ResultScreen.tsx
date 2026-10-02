@@ -22,7 +22,7 @@ export function ResultScreen({
 
   return (
     <div className="scene">
-      <div className="sprite f-panel card scale-lg">
+      <div className="sprite f-panel card result-card scale-lg">
         <h1 className="card-title">{title}</h1>
         <p className="result-score">
           <span className="sprite f-icon-score" aria-hidden="true" />
@@ -34,7 +34,7 @@ export function ResultScreen({
         </p>
 
         {saveStatus === "error" ? (
-          <div role="alert">
+          <div role="alert" className="result-alert">
             <p>Could not save this match. It is kept and will be sent again.</p>
             <SpriteButton variant="secondary" onClick={onRetry}>
               Try again

@@ -29,6 +29,7 @@ export function GameScreen({
 
   const [paused, setPaused] = useState(false);
   const loopRef = useRef<GameLoop | null>(null);
+  const inputRef = useRef<GameInput | null>(null);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -37,6 +38,7 @@ export function GameScreen({
 
     const app = new Application();
     const input = new GameInput();
+    inputRef.current = input;
     let loop: GameLoop | null = null;
     let initialized = false;
     let disposed = false;
@@ -119,13 +121,17 @@ export function GameScreen({
       disposed = true;
       loop?.stop();
       input.detachKeyboard();
+      inputRef.current = null;
       if (initialized) app.destroy(true, { children: true });
     };
   }, [onFinish, options]);
 
-  // Pause or resume the game loop whenever `paused` changes.
+  // Pause or resume the game loop whenever `paused` changes. While paused the
+  // input forgets held keys and ignores new ones, so nothing pressed during
+  // the pause is applied after resuming.
   useEffect(() => {
     loopRef.current?.setPaused(paused);
+    inputRef.current?.setEnabled(!paused);
   }, [paused]);
 
   // Esc / P toggle the pause; losing focus pauses automatically.

@@ -8,7 +8,7 @@ import type { TextureMap } from "./atlas";
 import { damageLevelFor, shipFrameName } from "./shipSprites";
 import type { DamageLevel, ShipColor } from "./shipSprites";
 
-const SHIP_SCALE = 0.5;
+const SHIP_SCALE = 0.65;
 const SPRITE_ROTATION_OFFSET = -Math.PI / 2;
 
 const WATER_TILE = 73;
@@ -40,9 +40,9 @@ const PLANT_SPOTS = [
 const PROJECTILE_RADIUS = 4;
 const PROJECTILE_COLOR = 0x2b2b2b;
 const ENEMY_PROJECTILE_COLOR = 0xd9381e;
-const HEALTH_BAR_WIDTH = 40;
-const HEALTH_BAR_HEIGHT = 5;
-const HEALTH_BAR_OFFSET = 34;
+const HEALTH_BAR_WIDTH = 52;
+const HEALTH_BAR_HEIGHT = 6;
+const HEALTH_BAR_OFFSET = 44;
 const HEALTH_BAR_BACK_COLOR = 0x3a3a3a;
 const HEALTH_BAR_COLOR = 0x4ec24e;
 

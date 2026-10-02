@@ -32,7 +32,7 @@ export interface GameConfig {
     readonly contactDamage: number;
     readonly radius: number;
   };
-    readonly shooter: {
+  readonly shooter: {
     readonly maxHp: number;
     readonly speed: number;
     readonly contactDamage: number;
@@ -54,9 +54,9 @@ export const gameConfig: GameConfig = {
     width: 1280,
     height: 720,
     islands: [
-      { x: 300, y: 200, radius: 90 },
-      { x: 900, y: 260, radius: 110 },
-      { x: 640, y: 560, radius: 80 },
+      { x: 300, y: 200, radius: 118 },
+      { x: 900, y: 260, radius: 143 },
+      { x: 640, y: 560, radius: 104 },
     ],
   },
   match: { durationSeconds: 120, scorePerKill: 1 },
@@ -64,19 +64,19 @@ export const gameConfig: GameConfig = {
     maxHp: 100,
     speed: 220,
     rotationSpeed: 3,
-    radius: 20,
+    radius: 26,
     fireCooldownMs: 400,
     broadsideCooldownMs: 1000,
     broadsideProjectiles: 3,
-    broadsideSpacing: 14, // pixels between the parallel shots
+    broadsideSpacing: 18,
   },
   projectile: { speed: 500, damage: 10, lifetimeMs: 1500 },
   chaser: { maxHp: 30, speed: 110, contactDamage: 10, radius: 20 },
-    shooter: {
+  shooter: {
     maxHp: 20,
     speed: 80,
     contactDamage: 10,
-    radius: 20,
+    radius: 26,
     fireCooldownMs: 1500,
     range: 320,
     shotDamage: 5,

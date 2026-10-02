@@ -263,11 +263,15 @@ it("never lets the player hp go below zero", () => {
   expect(state.player.hp).toBe(0);
 });
 
-
 it("gives points for each destroyed enemy", () => {
   const state = createGameState();
   const input = new GameInput();
-  state.enemies.push({ x: 100, y: 100, angle: 0, hp: gameConfig.projectile.damage });
+  state.enemies.push({
+    x: 100,
+    y: 100,
+    angle: 0,
+    hp: gameConfig.projectile.damage,
+  });
   state.projectiles.push({ x: 100, y: 100, vx: 0, vy: 0, timeLeft: 1 });
 
   updateGame(state, 0.01, input);
@@ -305,4 +309,18 @@ it("stops updating after the match is over", () => {
   updateGame(state, 0.5, input);
 
   expect(state.player.y).toBe(startY);
+});
+
+it("uses the given options for the match length and the spawn interval", () => {
+  const state = createGameState(1, {
+    durationSeconds: 30,
+    spawnIntervalSeconds: 1,
+  });
+  const input = new GameInput();
+
+  expect(state.timeLeft).toBe(30);
+
+  updateGame(state, 1.01, input);
+
+  expect(state.enemies).toHaveLength(1);
 });

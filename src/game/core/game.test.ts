@@ -477,3 +477,42 @@ it("damages the player when an enemy shot hits the ship", () => {
   );
   expect(state.enemyProjectiles).toHaveLength(0);
 });
+
+it("sails around an island that is between the enemy and the player", () => {
+  const state = createGameState();
+  state.spawnInterval = 999;
+  const island = state.islands[2].rects[0]; // the block at the bottom
+  state.player.x = island.x + island.width / 2;
+  state.player.y = island.y - 80; // above the island
+  state.enemies.push({
+    kind: "chaser",
+    cooldown: 0,
+    x: state.player.x,
+    y: island.y + island.height + 30, // right below it
+    angle: 0,
+    hp: 30,
+  });
+  const input = new GameInput();
+
+  for (let i = 0; i < 600; i++) updateGame(state, 0.05, input);
+
+  expect(state.player.hp).toBeLessThan(gameConfig.player.maxHp);
+});
+
+it("spawns ships with free water around them", () => {
+  const state = createGameState();
+  state.player.x = 640;
+  state.player.y = 360;
+  const clearance =
+    gameConfig.chaser.radius + gameConfig.spawn.minDistanceFromIslands;
+
+  for (let i = 0; i < 100; i++) {
+    const point = findSpawnPoint(state);
+    if (!point) continue;
+    for (const island of state.islands) {
+      expect(
+        circleOverlapsIsland({ ...point, radius: clearance - 0.001 }, island),
+      ).toBe(false);
+    }
+  }
+});

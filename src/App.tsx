@@ -16,6 +16,7 @@ import { OptionsScreen } from "./ui/screens/OptionsScreen";
 import { ResultScreen } from "./ui/screens/ResultScreen";
 import type { MatchResult } from "./ui/matchResult";
 import { enterFullscreen } from "./ui/fullscreen";
+import { saveLastResult } from "./storage/lastResult";
 
 type Screen =
   | { name: "menu" }
@@ -42,6 +43,7 @@ export default function App() {
     (result: MatchResult) => {
       const record = toMatchRecord(result, loadPlayerId());
       addPendingMatch(record);
+      saveLastResult(result);
       setScreen({ name: "result", result });
       mutate(record);
     },

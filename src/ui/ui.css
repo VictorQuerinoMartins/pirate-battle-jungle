@@ -648,3 +648,10 @@
     justify-content: center;
   }
 }
+
+.last-match {
+  margin: 0 0 8px;
+  font-size: 14px;
+  text-align: center;
+  color: #f6e7c8;
+}

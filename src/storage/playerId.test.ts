@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loadPlayerId } from "./playerId";
+import { cleanPlayerName, loadPlayerId, savePlayerName } from "./playerId";
 
 function fakeStorage(initial: string | null = null) {
   let value = initial;
@@ -37,5 +37,26 @@ describe("loadPlayerId", () => {
     };
 
     expect(loadPlayerId(blocked)).toBe(loadPlayerId(blocked));
+  });
+
+  describe("player name", () => {
+    it("cleans extra spaces and limits the length", () => {
+      expect(cleanPlayerName("  Jack   Sparrow  ")).toBe("Jack Sparrow");
+      expect(cleanPlayerName("A".repeat(40))).toHaveLength(16);
+    });
+
+    it("saves the name so loadPlayerId returns it", () => {
+      const storage = fakeStorage("Pilot-old");
+
+      expect(savePlayerName("Blackbeard", storage)).toBe("Blackbeard");
+      expect(loadPlayerId(storage)).toBe("Blackbeard");
+    });
+
+    it("keeps the previous name when the new one is empty", () => {
+      const storage = fakeStorage("Pilot-old");
+
+      expect(savePlayerName("   ", storage)).toBe("Pilot-old");
+      expect(loadPlayerId(storage)).toBe("Pilot-old");
+    });
   });
 });

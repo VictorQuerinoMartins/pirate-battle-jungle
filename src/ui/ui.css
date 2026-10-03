@@ -607,3 +607,44 @@
     }
   }
 }
+
+/* ---------- player name field (menu) ---------- */
+
+.name-input {
+  flex: none;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 16px;
+  text-align: center;
+  color: #f6e7c8;
+  background: rgba(6, 22, 38, 0.65);
+  border: 2px solid #6b3a12;
+  border-radius: 6px;
+  outline: none;
+}
+.name-input::placeholder {
+  color: rgba(246, 231, 200, 0.5);
+}
+.name-input:focus {
+  border-color: #ffd978;
+}
+.menu-card > .btn {
+  flex: none;
+}
+
+@media (max-height: 600px) {
+  .name-input {
+    padding: 3px 8px;
+  }
+}
+
+@media (pointer: coarse) {
+  .menu-card section[aria-labelledby="controls-title"] {
+    display: none;
+  }
+  .menu-card {
+    justify-content: center;
+  }
+}

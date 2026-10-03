@@ -14,9 +14,9 @@ npx playwright show-report      # HTML report with traces for failures
 
 | Suite | Result |
 |---|---|
-| Unit tests (Vitest) | 96 passed |
-| End-to-end, desktop Chromium | 17 passed, 2 skipped (touch-only tests) |
-| End-to-end, mobile Chromium (Pixel 7, landscape) | 17 passed |
+| Unit tests (Vitest) | 137 passed |
+| End-to-end, desktop Chromium | 16 passed, 2 skipped (touch-only tests) |
+| End-to-end, mobile Chromium (Pixel 7, landscape) | 18 passed |
 
 ## What the end-to-end tests cover
 

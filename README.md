@@ -56,7 +56,8 @@ Touch controls appear on touch devices. The supported orientation is **landscape
 - You score 1 point for each enemy you destroy. A Chaser that crashes into your ship does not give points.
 - **Chaser:** chases the ship, damages it on contact and explodes.
 - **Shooter:** approaches until it is in range, stops and fires at the ship. Its shots are blocked by islands.
-- Both enemy types respect islands. Enemies appear at safe points: free of islands and far from the player.
+- Both enemy types respect islands and steer around them instead of getting stuck. Enemies appear at safe points: free of islands and far from the player.
+- Before playing you can type a name (up to 16 characters) in the menu. It is saved in the browser and used as your id in the ranking and in the match history.
 - The match ends when time runs out or the ship is destroyed. Ending stops movement, attacks, damage, spawns and score.
 - The game pauses by itself when the window loses focus or the tab is hidden. Resuming needs a player action, and nothing pressed during the pause is applied afterwards.
 - Feedback: shot flashes, hit sparks, explosions, health bars over every ship, and ship sprites that deteriorate as health drops.
@@ -76,13 +77,14 @@ All values live in `src/game/config/gameConfig.ts`.
 
 | Group | Value |
 |---|---|
-| Arena | 1280 x 720, 3 islands |
+| Arena | 1280 x 720, 3 islands made of rectangles |
 | Player | 100 HP, speed 220 px/s, turn speed 3 rad/s, radius 20 |
 | Player weapons | front: 400 ms cooldown; broadside: 1000 ms cooldown, 3 shots 14 px apart (each weapon has its own cooldown) |
 | Projectile | speed 500 px/s, damage 10, lifetime 1.5 s |
 | Chaser | 30 HP, speed 110 px/s, contact damage 10 |
 | Shooter | 20 HP, speed 80 px/s, range 320 px, fires every 1.5 s, shot damage 5, contact damage 10 |
 | Spawn | default every 3 s, at most 8 enemies, at least 300 px from the player, 30% Shooters |
+
 **Fort cannon (extra).** When the score reaches 5, the cannon in the fort on the left island wakes up and fires a slow shot at the player every 3 seconds (8 damage, range 460 px, dodgeable). The fort cannot be destroyed and its shots never score points. Its values are in `gameConfig.fort`.
 
 ## Mock API (MSW) and failure scenarios
@@ -121,7 +123,7 @@ The ranking and match history come from a mocked REST API (`GET /api/ranking`, `
 
 ## Testing
 
-- **Unit tests:** `npm test` (96 tests): rules, input, options, ranking, storage, mock handlers and scenarios.
+- **Unit tests:** `npm test` (137 tests): rules, input, options, ranking, storage, mock handlers and scenarios.
 - **End-to-end tests:** `npm run test:e2e` (Chromium desktop and a mobile profile in landscape). They run against the production build and cover the menu, ranking, options, MSW scenarios, a full match to the result and history, abandoned matches, play again, API outage with recovery, pause, touch controls and visual regression.
 - **Reproducible matches:** `?seed=<number>` fixes the random generator, and `?testControls` exposes `window.__pirateBattle.advance(seconds)` so the tests control the simulation clock. Together with Playwright's fake clock, a 60 s match runs in milliseconds. Every test starts in a fresh browser context, so no state is shared.
 - **Visual regression:** menu, a still arena and the result screen. The reference images in `tests/e2e/visual.spec.ts-snapshots/` were created on Windows (`-win32` in the file names). On another operating system run `npx playwright test --update-snapshots` first.

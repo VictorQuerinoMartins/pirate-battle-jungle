@@ -62,18 +62,21 @@ Other details:
 
 ## 4. Collisions
 
-All shapes are circles (islands, ships) or points (projectiles); there is no AABB. Two helpers in `geometry.ts` do the work: `circlesOverlap` and `pushOutOfCircle`.
+Ships are circles, projectiles are points and each island is a union of axis-aligned rectangles (`Island { rects }`). `geometry.ts` holds the helpers: `circlesOverlap`, `pushOutOfCircle`, `pointInIsland`, `circleOverlapsIsland` and `pushOutOfIsland`. The last one runs two passes, so a ship in the corner between two rectangles ends outside both. The drawn coast has wavy edges, but that is only visual (at most 7 px): collisions always use the exact rectangles.
 
 Order of each update:
 
 1. Move the player (turn, forward), push it out of islands, keep it inside the arena.
 2. Cooldowns and player shots (front: 1 projectile, broadsides: 3 parallel projectiles).
-3. Advance projectiles; remove those that expired, left the arena or hit an island (player and enemy projectiles use the same function).
+3. Advance projectiles; remove those that expired, left the arena or hit an island (player and enemy projectiles use the same function; fort shots ignore islands).
 4. Player projectiles against enemies: each projectile damages once and disappears; enemies with no health are removed and score.
-5. Spawn and move enemies (Chasers and Shooters are pushed out of islands); Shooters fire when in range.
-6. Enemies touching the player: the enemy explodes and damages the player (no score).
-7. Enemy projectiles against the player.
-8. Update the match time and finish the match when the time is over or the ship has no health.
+5. Spawn and move enemies (Chasers and Shooters steer around islands and are pushed out of them); Shooters fire when in range.
+6. Fort cannon: once the score reaches 5 it fires a slow shot at the player every 3 seconds.
+7. Enemies touching the player: the enemy explodes and damages the player (no score).
+8. Enemy projectiles against the player.
+9. Update the match time and finish the match when the time is over or the ship has no health.
+
+**Enemy steering.** `steerAround` probes two points ahead of the ship. If one is inside an island, it tries growing turn angles, first on the side the enemy already chose (`enemy.avoid`) and then on the other, so it does not zigzag. Spawn points keep `spawn.minDistanceFromIslands` (70 px) of clearance from every island.
 
 ## 5. Resource management
 
@@ -87,7 +90,7 @@ Order of each update:
 | Key | Content |
 |---|---|
 | `pirate-battle:options` | Session time and spawn interval (validated and clamped on read) |
-| `pirate-battle:player-id` | Player id like `Pilot-1a2b3c4d`, with an in-memory fallback when storage is blocked |
+| `pirate-battle:player-id` | Player name: a generated `Pilot-1a2b3c4d` until the player types one in the menu (up to 16 characters). It is the id used by the ranking and the history. In-memory fallback when storage is blocked |
 | `pirate-battle:pending-matches` | Matches not yet confirmed by the API |
 | `pirate-battle:mock-matches` | Matches registered in the mock API |
 | `pirate-battle:mock-scenario` | Scenario chosen in the menu |
@@ -115,10 +118,11 @@ The values in `gameConfig.ts` were set by hand and tuned by playing; they are a 
 
 ## 9. Known limitations
 
-- The sounds that came with the assets are not wired yet.
+- Sound is simple: game events map to the delivered files, with no mixing or positional audio.
 - The balance was tuned by feel only; there is no automatic difficulty curve.
 - Enemies appear only on the left and right edges of the arena.
 - The mock API lives in the browser: the ranking shows fixed players plus the matches registered in the same browser.
 - The visual regression images are for Windows; other systems need `--update-snapshots`.
 - The performance run uses a simple scripted pilot that is destroyed quickly, so the entity counts are lower than in a long human match. GPU memory is not measured.
 - The production bundle is about 980 kB (PixiJS) and gets a size warning from Vite; code splitting was not done.
+- The player name is also the player id, so two people typing the same name share a history, and changing the name starts a new history. That is acceptable for a mocked API.

@@ -15,6 +15,7 @@ import { MenuScreen } from "./ui/screens/MenuScreen";
 import { OptionsScreen } from "./ui/screens/OptionsScreen";
 import { ResultScreen } from "./ui/screens/ResultScreen";
 import type { MatchResult } from "./ui/matchResult";
+import { enterFullscreen } from "./ui/fullscreen";
 
 type Screen =
   | { name: "menu" }
@@ -88,7 +89,10 @@ export default function App() {
       return (
         <MenuScreen
           options={options}
-          onPlay={() => setScreen({ name: "game" })}
+          onPlay={() => {
+            enterFullscreen();
+            setScreen({ name: "game" });
+          }}
           onOptions={() => setScreen({ name: "options" })}
         />
       );

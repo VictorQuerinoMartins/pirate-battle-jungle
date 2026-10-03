@@ -551,4 +551,59 @@
     font-size: 11px;
     line-height: 1.2;
   }
+
+  /* ---------- phones in landscape: size by HEIGHT, not by width ---------- */
+
+  @media (pointer: coarse) and (max-height: 480px) {
+    .touch-btn {
+      --s: 1;
+      opacity: 0.92;
+    }
+    .touch-btn > .sprite {
+      --s: 0.8;
+    }
+    .touch-pause {
+      --s: 0.85;
+      top: 46px;
+      right: max(10px, env(safe-area-inset-right));
+    }
+    .hud {
+      padding: 6px max(10px, env(safe-area-inset-right)) 0
+        max(10px, env(safe-area-inset-left));
+    }
+    .hud-health {
+      --s: 0.62;
+    }
+    .hud-health-text {
+      font-size: 10px;
+    }
+    .hud-counter {
+      --s: 0.68;
+    }
+    .hud-counter > .sprite {
+      --s: 0.42;
+    }
+    .hud-right {
+      gap: 6px;
+    }
+  }
+
+  @media (pointer: coarse) and (max-height: 360px) {
+    .touch-btn {
+      --s: 0.85;
+    }
+    .touch-btn > .sprite {
+      --s: 0.68;
+    }
+    .touch-pause {
+      --s: 0.72;
+      top: 40px;
+    }
+    .hud-health {
+      --s: 0.52;
+    }
+    .hud-counter {
+      --s: 0.58;
+    }
+  }
 }

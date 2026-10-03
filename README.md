@@ -81,6 +81,7 @@ All values live in `src/game/config/gameConfig.ts`.
 | Chaser | 30 HP, speed 110 px/s, contact damage 10 |
 | Shooter | 20 HP, speed 80 px/s, range 320 px, fires every 1.5 s, shot damage 5, contact damage 10 |
 | Spawn | default every 3 s, at most 8 enemies, at least 300 px from the player, 30% Shooters |
+**Fort cannon (extra).** When the score reaches 5, the cannon in the fort on the left island wakes up and fires a slow shot at the player every 3 seconds (8 damage, range 460 px, dodgeable). The fort cannot be destroyed and its shots never score points. Its values are in `gameConfig.fort`.
 
 ## Mock API (MSW) and failure scenarios
 

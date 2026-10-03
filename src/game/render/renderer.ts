@@ -1,12 +1,14 @@
-import { Container, Graphics, Sprite, TilingSprite } from "pixi.js";
-import type { Application, Texture } from "pixi.js";
+import { Container, Graphics, Sprite, Texture, TilingSprite } from "pixi.js";
+import type { Application } from "pixi.js";
 import { gameConfig } from "../config/gameConfig";
 import type { GameEvent, GameState, ProjectileState } from "../core/game";
+import type { Rect } from "../core/geometry";
 import { gridTile, sheetRegion } from "./atlas";
 import type { TextureMap } from "./atlas";
 import { createRandom, makeDebris } from "./debris";
 import type { DebrisPiece, DebrisSize } from "./debris";
-import { blobPoints } from "./islandShape";
+import { ISLAND_ART } from "./islandArt";
+import { wobblyRectPoints } from "./landShape";
 import { damageLevelFor, shipFrameName } from "./shipSprites";
 import type { DamageLevel, ShipColor } from "./shipSprites";
 import { trailSegments } from "./trail";
@@ -22,12 +24,19 @@ const SAND_TILE = 68;
 const SAND_EDGE_COLOR = 0xdba66b;
 const GRASS_COLOR = 0x86b036;
 const GRASS_EDGE_COLOR = 0x6f9a2c;
-const GRASS_RATIO = 0.66; // grass radius / island radius
 const SHALLOW_COLOR = 0xb8efff;
 const SHALLOW_BANDS = [
   { extra: 46, alpha: 0.18 },
   { extra: 22, alpha: 0.3 },
 ] as const;
+const CORNER_RADIUS = 30; // round corners of the drawn land (not of collision)
+const GRASS_CORNER = 22;
+// How far the drawn edges move in and out (pixels). Collision ignores it.
+const SAND_WOBBLE = 7;
+const SHALLOW_WOBBLE = 10;
+const GRASS_WOBBLE = 6;
+const BEACH_EDGE = 4; // width of the darker edge around the sand
+const GRASS_EDGE = 3;
 
 // Regions of tiles_sheet.png (64 px tiles): three plants.
 const PLANT_SIZE = 64;
@@ -37,34 +46,23 @@ const PLANT_ARTS = [
   { x: 384, y: 256 },
   { x: 448, y: 256 },
 ] as const;
-const PLANT_SPOTS = [
-  { dx: -0.25, dy: -0.15, plant: 1 },
-  { dx: 0.3, dy: 0.2, plant: 2 },
-  { dx: 0.05, dy: 0.3, plant: 0 },
-] as const;
 
-// Rocks (plain and mossy) 
-const DECOR_BY_ISLAND = [
-  [
-    { angle: 3.6, dist: 0.84, tile: 66, scale: 0.5 },
-    { angle: 0.9, dist: 0.35, tile: 87, scale: 1 },
-    { angle: 2.2, dist: 0.45, tile: 88, scale: 1 },
-  ],
-  [
-    { angle: 5.0, dist: 0.85, tile: 50, scale: 0.6 },
-    { angle: 5.5, dist: 0.83, tile: 49, scale: 0.4 },
-    { angle: 1.0, dist: 0.35, tile: 87, scale: 1 },
-    { angle: 2.6, dist: 0.42, tile: 88, scale: 1 },
-    { angle: 4.1, dist: 0.3, tile: 87, scale: 1 },
-  ],
-  [
-    { angle: 1.0, dist: 0.35, tile: 88, scale: 1 },
-    { angle: 3.6, dist: 0.4, tile: 87, scale: 1 },
-    { angle: 5.8, dist: 0.3, tile: 88, scale: 1 },
-  ],
-] as const;
+// Rocks (plain and mossy) and tiny leaves use tiles of tiles_sheet.png; their
+// places are in islandArt.ts.
 const TILES_PER_ROW = 16;
 const TILE_SIZE = 64;
+
+// The fort: a 3x3 block of tiles (corner towers, walls and an empty courtyard
+// marked 0) with a cannon in the middle.
+const FORT_LAYOUT = [
+  [77, 16, 78],
+  [15, 0, 15],
+  [93, 16, 94],
+] as const;
+const FORT_TILE_SCALE = 0.75;
+const FORT_TILE = TILE_SIZE * FORT_TILE_SCALE;
+const FORT_CANNON_SCALE = 1.2;
+const FORT_SLEEP_TINT = 0x8a8a8a; // the cannon is dark until the fort wakes up
 
 const PROJECTILE_RADIUS = 4;
 const PROJECTILE_COLOR = 0x2b2b2b;
@@ -88,6 +86,15 @@ const SPARK_FRAMES = ["explosion_3.png"] as const;
 const MAX_EFFECTS = 60;
 const MAX_DEBRIS = 80;
 const DEBRIS_DRAG = 2.2; // how fast the pieces slow down
+
+// The smallest rectangle that holds all the rectangles of an island.
+function islandBounds(rects: readonly Rect[]): Rect {
+  const left = Math.min(...rects.map((rect) => rect.x));
+  const top = Math.min(...rects.map((rect) => rect.y));
+  const right = Math.max(...rects.map((rect) => rect.x + rect.width));
+  const bottom = Math.max(...rects.map((rect) => rect.y + rect.height));
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
 
 interface Effect {
   sprite: Sprite;
@@ -124,6 +131,7 @@ export class Renderer {
   private readonly water: TilingSprite;
   private readonly waves: TilingSprite;
   private waterTime = 0;
+  private readonly fortCannon: Sprite;
 
   constructor(
     app: Application,
@@ -134,7 +142,8 @@ export class Renderer {
     this.app = app;
     this.textures = textures;
 
-    // Layer 1: the sea
+    // Layer 1: the sea. A second, larger and fainter copy of the same tile
+    // drifts the other way, so the water looks alive.
     const { width, height } = gameConfig.arena;
     const waterTexture = gridTile(tileSheet, WATER_TILE);
     this.water = new TilingSprite({ texture: waterTexture, width, height });
@@ -142,11 +151,15 @@ export class Renderer {
     this.waves.tileScale.set(1.6);
     this.waves.alpha = WAVE_ALPHA;
 
-    // Layer 2: the islands, built in layers....
-
+    // Layer 2: the islands. Each one is a union of rectangles, drawn in layers:
+    // shallow water (the sandbank), sand, a beach edge, grass, plants, rocks
+    // and leaves. The shallow water and the sand use masks, so places where two
+    // rectangles overlap are not drawn twice.
     const islands = new Container();
     const sandTexture = gridTile(tileSheet, SAND_TILE);
 
+    // One pixel is cut from each side: the plants only have empty pixels
+    // there, and it stops the filter from mixing in the neighbouring tile.
     const plantTextures = PLANT_ARTS.map((art) =>
       sheetRegion(
         tileSheet,
@@ -157,6 +170,7 @@ export class Renderer {
       ),
     );
 
+    // Same one-pixel cut for the rocks and leaves, picked by tile number.
     const decorTextures = new Map<number, Texture>();
     const decorTexture = (tile: number): Texture => {
       let texture = decorTextures.get(tile);
@@ -174,64 +188,133 @@ export class Renderer {
       return texture;
     };
 
-    state.islands.forEach((island, index) => {
-      const phase = index * 2.1;
-      const outline = (radius: number) =>
-        blobPoints(island.x, island.y, radius, phase);
+    // Draws a wobbly outline for every rectangle, grown by `grow` pixels.
+    // `phase` makes each island and each rectangle wobble in its own way.
+    const drawBlobs = (
+      graphics: Graphics,
+      rects: readonly Rect[],
+      grow: number,
+      phase: number,
+      amplitude: number,
+      corner = CORNER_RADIUS,
+    ): Graphics => {
+      rects.forEach((rect, i) => {
+        graphics.poly(
+          wobblyRectPoints(rect, grow, {
+            corner,
+            phase: phase + i * 2.3,
+            amplitude,
+          }),
+        );
+      });
+      return graphics;
+    };
 
-      const shallow = new Graphics();
+    state.islands.forEach((island, index) => {
+      const art = ISLAND_ART[index % ISLAND_ART.length];
+      const phase = index * 2.1 + 0.7;
+      const bounds = islandBounds(island.rects);
+
       for (const band of SHALLOW_BANDS) {
-        shallow
-          .poly(outline(island.radius + band.extra))
-          .fill({ color: SHALLOW_COLOR, alpha: band.alpha });
+        const water = new Sprite(Texture.WHITE);
+        water.tint = SHALLOW_COLOR;
+        water.alpha = band.alpha;
+        water.position.set(bounds.x - band.extra, bounds.y - band.extra);
+        water.width = bounds.width + 2 * band.extra;
+        water.height = bounds.height + 2 * band.extra;
+        const mask = drawBlobs(
+          new Graphics(),
+          island.rects,
+          band.extra,
+          phase + band.extra,
+          SHALLOW_WOBBLE,
+        ).fill(0xffffff);
+        water.mask = mask;
+        islands.addChild(mask, water);
       }
 
+      // The beach edge is the sand rectangles grown by a few pixels, in a
+      // darker color, with the sand drawn over them.
+      const beach = drawBlobs(
+        new Graphics(),
+        island.rects,
+        BEACH_EDGE,
+        phase,
+        SAND_WOBBLE,
+      ).fill(SAND_EDGE_COLOR);
       const sand = new TilingSprite({
         texture: sandTexture,
-        width: island.radius * 2,
-        height: island.radius * 2,
+        width: bounds.width,
+        height: bounds.height,
       });
-      sand.position.set(island.x - island.radius, island.y - island.radius);
-      const sandMask = new Graphics()
-        .poly(outline(island.radius))
-        .fill(0xffffff);
+      sand.position.set(bounds.x, bounds.y);
+      const sandMask = drawBlobs(
+        new Graphics(),
+        island.rects,
+        0,
+        phase,
+        SAND_WOBBLE,
+      ).fill(0xffffff);
       sand.mask = sandMask;
+      islands.addChild(beach, sandMask, sand);
 
-      const beach = new Graphics()
-        .poly(outline(island.radius))
-        .stroke({ color: SAND_EDGE_COLOR, width: 4 });
-      const grass = new Graphics()
-        .poly(outline(island.radius * GRASS_RATIO))
-        .fill(GRASS_COLOR)
-        .stroke({ color: GRASS_EDGE_COLOR, width: 3 });
+      const grassEdge = drawBlobs(
+        new Graphics(),
+        art.grass,
+        GRASS_EDGE,
+        phase + 1,
+        GRASS_WOBBLE,
+        GRASS_CORNER,
+      ).fill(GRASS_EDGE_COLOR);
+      const grass = drawBlobs(
+        new Graphics(),
+        art.grass,
+        0,
+        phase + 1,
+        GRASS_WOBBLE,
+        GRASS_CORNER,
+      ).fill(GRASS_COLOR);
+      islands.addChild(grassEdge, grass);
 
-      islands.addChild(shallow, sandMask, sand, beach, grass);
-
-      for (const spot of PLANT_SPOTS) {
+      for (const spot of art.plants) {
         const plant = new Sprite(plantTextures[spot.plant]);
         plant.anchor.set(0.5);
-        plant.position.set(
-          island.x + spot.dx * island.radius,
-          island.y + spot.dy * island.radius,
-        );
-        plant.scale.set(island.radius / 110);
+        plant.position.set(spot.x, spot.y);
+        plant.scale.set(spot.scale);
         islands.addChild(plant);
       }
 
-      const decorList = DECOR_BY_ISLAND[index % DECOR_BY_ISLAND.length];
-      for (const spot of decorList) {
-        const angle = spot.angle + phase;
+      for (const spot of art.decor) {
         const decor = new Sprite(decorTexture(spot.tile));
         decor.anchor.set(0.5);
-        decor.position.set(
-          island.x + Math.cos(angle) * spot.dist * island.radius,
-          island.y + Math.sin(angle) * spot.dist * island.radius,
-        );
-        decor.scale.set((spot.scale * island.radius) / 110);
-        decor.rotation = spot.angle * 3;
+        decor.position.set(spot.x, spot.y);
+        decor.scale.set(spot.scale);
+        decor.rotation = spot.rotation;
         islands.addChild(decor);
       }
     });
+
+    // The fort stands on one of the islands. The cannon turns toward the
+    // player in `render`.
+    const { fort } = state;
+    FORT_LAYOUT.forEach((row, rowIndex) => {
+      row.forEach((tile, colIndex) => {
+        if (tile === 0) return;
+        const piece = new Sprite(gridTile(tileSheet, tile));
+        piece.anchor.set(0.5);
+        piece.scale.set(FORT_TILE_SCALE);
+        piece.position.set(
+          fort.x + (colIndex - 1) * FORT_TILE,
+          fort.y + (rowIndex - 1) * FORT_TILE,
+        );
+        islands.addChild(piece);
+      });
+    });
+    this.fortCannon = new Sprite(this.effectTexture("cannon_mobile.png"));
+    this.fortCannon.anchor.set(0.5);
+    this.fortCannon.scale.set(FORT_CANNON_SCALE);
+    this.fortCannon.position.set(fort.x, fort.y);
+    islands.addChild(this.fortCannon);
 
     // Layer 3: the player ship.
     this.playerSprite = new Sprite(this.shipTexture("red", 0));
@@ -255,6 +338,7 @@ export class Renderer {
   render(state: GameState, dt = 0): void {
     const { player } = state;
 
+    // The sea drifts with the game time, so it freezes with the pause.
     this.waterTime += dt;
     this.water.tilePosition.set(this.waterTime * 8, this.waterTime * 3);
     this.waves.tilePosition.set(this.waterTime * -5, this.waterTime * 6);
@@ -267,6 +351,9 @@ export class Renderer {
 
     this.playerSprite.position.set(player.x, player.y);
     this.playerSprite.rotation = player.angle + SPRITE_ROTATION_OFFSET;
+
+    this.fortCannon.rotation = state.fort.angle;
+    this.fortCannon.tint = state.fort.active ? 0xffffff : FORT_SLEEP_TINT;
 
     this.projectileGraphics.clear();
     for (const projectile of state.projectiles) {

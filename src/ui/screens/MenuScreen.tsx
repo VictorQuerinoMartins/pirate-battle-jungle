@@ -1,6 +1,10 @@
 import { useState } from "react";
 import type { GameOptions } from "../../game/core/options";
-import { loadPlayerId } from "../../storage/playerId";
+import {
+  loadPlayerId,
+  MAX_NAME_LENGTH,
+  savePlayerName,
+} from "../../storage/playerId";
 import { ControlsHelp } from "../components/ControlsHelp";
 import { HistoryPanel } from "../components/HistoryPanel";
 import { RankingPanel } from "../components/RankingPanel";
@@ -17,7 +21,14 @@ type Tab = "ranking" | "history";
 
 export function MenuScreen({ options, onPlay, onOptions }: MenuScreenProps) {
   const [tab, setTab] = useState<Tab>("ranking");
-  const [playerId] = useState(() => loadPlayerId());
+  const [playerId, setPlayerId] = useState(() => loadPlayerId());
+  const [draft, setDraft] = useState(playerId);
+
+  function commitName() {
+    const saved = savePlayerName(draft);
+    setPlayerId(saved);
+    setDraft(saved);
+  }
 
   return (
     <div className="scene">
@@ -29,8 +40,30 @@ export function MenuScreen({ options, onPlay, onOptions }: MenuScreenProps) {
             aria-label="Pirate Battle"
           />
         </h1>
-        <div className="sprite f-panel card scale-lg">
-          <SpriteButton onClick={onPlay}>Play</SpriteButton>
+        <div className="sprite f-panel card menu-card scale-lg">
+          <input
+            className="name-input"
+            type="text"
+            value={draft}
+            maxLength={MAX_NAME_LENGTH}
+            placeholder="Your name"
+            aria-label="Your name"
+            autoComplete="off"
+            spellCheck={false}
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={commitName}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.currentTarget.blur();
+            }}
+          />
+          <SpriteButton
+            onClick={() => {
+              commitName();
+              onPlay();
+            }}
+          >
+            Play
+          </SpriteButton>
           <SpriteButton variant="secondary" onClick={onOptions}>
             Options
           </SpriteButton>

@@ -9,7 +9,8 @@ function hasEvent(
 ): boolean {
   return state.events.some(
     (event) =>
-      event.type === type && (size === undefined || ("size" in event && event.size === size)),
+      event.type === type &&
+      (size === undefined || ("size" in event && event.size === size)),
   );
 }
 
@@ -26,8 +27,15 @@ describe("game events", () => {
 
   it("reports a hit and an explosion when a shot destroys an enemy", () => {
     const state = createGameState(1);
-    state.enemies.push({ kind: "chaser", x: 100, y: 100, angle: 0, hp: 1, cooldown: 0 });
-    state.projectiles.push({ x: 100, y: 100, vx: 0, vy: 0, timeLeft: 1 });
+    state.enemies.push({
+      kind: "chaser",
+      x: 500,
+      y: 300,
+      angle: 0,
+      hp: 1,
+      cooldown: 0,
+    });
+    state.projectiles.push({ x: 500, y: 300, vx: 0, vy: 0, timeLeft: 1 });
 
     updateGame(state, 0.016, new GameInput());
 

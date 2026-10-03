@@ -10,6 +10,8 @@ import { HistoryPanel } from "../components/HistoryPanel";
 import { RankingPanel } from "../components/RankingPanel";
 import { ScenarioPanel } from "../components/ScenarioPanel";
 import { SpriteButton } from "../components/SpriteButton";
+import { loadLastResult } from "../../storage/lastResult";
+import { formatTime } from "../formatTime";
 
 interface MenuScreenProps {
   options: GameOptions;
@@ -23,6 +25,7 @@ export function MenuScreen({ options, onPlay, onOptions }: MenuScreenProps) {
   const [tab, setTab] = useState<Tab>("ranking");
   const [playerId, setPlayerId] = useState(() => loadPlayerId());
   const [draft, setDraft] = useState(playerId);
+  const [lastResult] = useState(() => loadLastResult());
 
   function commitName() {
     const saved = savePlayerName(draft);
@@ -72,6 +75,14 @@ export function MenuScreen({ options, onPlay, onOptions }: MenuScreenProps) {
       </div>
 
       <div className="scores">
+        {lastResult && (
+          <p className="last-match">
+            Last battle: {lastResult.score}{" "}
+            {lastResult.score === 1 ? "point" : "points"} in{" "}
+            {formatTime(lastResult.secondsPlayed)} ·{" "}
+            {lastResult.reason === "time" ? "time's up" : "ship destroyed"}
+          </p>
+        )}
         <div role="tablist" aria-label="Scores">
           <button
             type="button"

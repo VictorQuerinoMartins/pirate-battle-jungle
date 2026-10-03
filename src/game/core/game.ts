@@ -58,6 +58,7 @@ export interface EnemyState {
   angle: number;
   hp: number;
   cooldown: number;
+  avoid?: 1 | -1; // side an enemy turned to when an island was in its way
 }
 
 export type GameStatus = "playing" | "over";
@@ -355,11 +356,60 @@ export function findSpawnPoint(state: GameState): Point | null {
       Math.hypot(point.x - state.player.x, point.y - state.player.y) >=
       spawn.minDistanceFromPlayer;
     const freeOfIslands = !state.islands.some((island) =>
-      circleOverlapsIsland({ ...point, radius: chaser.radius }, island),
+      circleOverlapsIsland(
+        { ...point, radius: chaser.radius + spawn.minDistanceFromIslands },
+        island,
+      ),
     );
     if (farFromPlayer && freeOfIslands) return point;
   }
   return null; // no safe place found: skip this spawn
+}
+
+// How far to turn, in radians, when an island is in the way. The ship tries
+// the smaller turns first, always on the side it turned to last time.
+const STEER_TURNS = [0.5, 1, 1.3, 1.6, 1.9, 2.2, 2.6] as const;
+
+// Picks the heading closest to `wanted` that does not run into an island a
+// short way ahead. Without it, a ship that meets a straight wall head-on
+// would stay pushed against it and never find the way around. It remembers
+// the side it chose (`avoid`), so it does not zigzag in front of the wall.
+function steerAround(
+  state: GameState,
+  enemy: EnemyState,
+  wanted: number,
+  radius: number,
+): number {
+  const look = radius + 45;
+  const probeRadius = radius - 6; // sliding along a wall is not blocked
+  const isFree = (angle: number): boolean =>
+    ![0.5, 1].some((part) => {
+      const probe = {
+        x: enemy.x + Math.cos(angle) * look * part,
+        y: enemy.y + Math.sin(angle) * look * part,
+        radius: probeRadius,
+      };
+      return state.islands.some((island) =>
+        circleOverlapsIsland(probe, island),
+      );
+    });
+
+  if (isFree(wanted)) {
+    delete enemy.avoid;
+    return wanted;
+  }
+
+  // All the turns on the side it already uses come first.
+  const side: 1 | -1 = enemy.avoid ?? 1;
+  for (const sign of [side, side === 1 ? -1 : 1] as const) {
+    for (const turn of STEER_TURNS) {
+      if (isFree(wanted + sign * turn)) {
+        enemy.avoid = sign;
+        return wanted + sign * turn;
+      }
+    }
+  }
+  return wanted;
 }
 
 function updateEnemies(state: GameState, dt: number): void {
@@ -380,12 +430,16 @@ function updateEnemies(state: GameState, dt: number): void {
 
   for (const enemy of state.enemies) {
     const stats = enemyStats(enemy.kind);
-    enemy.angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+    const toPlayer = Math.atan2(player.y - enemy.y, player.x - enemy.x);
 
     const distance = Math.hypot(player.x - enemy.x, player.y - enemy.y);
     const inRange = enemy.kind === "shooter" && distance <= shooter.range;
 
-    if (!inRange) {
+    if (inRange) {
+      enemy.angle = toPlayer; // stops and aims
+    } else {
+      // Sails toward the player, turning away from islands in the way.
+      enemy.angle = steerAround(state, enemy, toPlayer, stats.radius);
       enemy.x += Math.cos(enemy.angle) * stats.speed * dt;
       enemy.y += Math.sin(enemy.angle) * stats.speed * dt;
     }

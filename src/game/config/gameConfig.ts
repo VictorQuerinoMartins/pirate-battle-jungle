@@ -45,6 +45,7 @@ export interface GameConfig {
     readonly intervalMs: number;
     readonly maxEnemies: number;
     readonly minDistanceFromPlayer: number;
+    readonly minDistanceFromIslands: number; // free water around the new ship
     readonly maxAttempts: number;
   };
 
@@ -104,6 +105,7 @@ export const gameConfig: GameConfig = {
     intervalMs: 3000,
     maxEnemies: 8,
     minDistanceFromPlayer: 300,
+    minDistanceFromIslands: 70,
     maxAttempts: 10,
   },
 

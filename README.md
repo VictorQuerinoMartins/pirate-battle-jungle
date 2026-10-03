@@ -48,6 +48,8 @@ None are required. Assets are loaded relative to Vite's `BASE_URL`, the API clie
 
 Touch controls appear on touch devices. The supported orientation is **landscape**: held upright, the game pauses and asks you to rotate the device. Keys are captured only during a match, so menus keep normal keyboard navigation.
 
+**Mobile tip.** On Android and iPad, tapping Play asks the browser for fullscreen. iPhone Safari does not allow that for web pages, so add the game to the Home Screen (Share, then Add to Home Screen) to play without the browser bars.
+
 ## How the game works
 
 - A match lasts between 60 and 180 seconds of **active** play (the clock stops while paused).

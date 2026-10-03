@@ -343,9 +343,17 @@ export function GameScreen({
             padding: 24,
           }}
         >
-          <p style={{ margin: 0, fontSize: 20 }}>
-            Rotate your device to landscape to play.
-          </p>
+          <div>
+            <p style={{ margin: 0, fontSize: 20 }}>
+              Rotate your device to landscape to play.
+            </p>
+            <p style={{ margin: "12px 0 0", fontSize: 14, opacity: 0.85 }}>
+              Tip for a bigger screen: on iPhone, tap Share and choose Add to
+              Home Screen, then open the game from the new icon. On Android,
+              open the browser menu and choose Install app or Add to Home
+              screen.
+            </p>
+          </div>
         </div>
       )}
       {paused && !needsLandscape && (

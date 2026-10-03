@@ -5,7 +5,11 @@ test("menu", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByText("Page 1 of 3")).toBeVisible();
 
-  await expect(page).toHaveScreenshot("menu.png", { fullPage: true });
+  // a new browser gets a random player name, so the field is masked
+  await expect(page).toHaveScreenshot("menu.png", {
+    fullPage: true,
+    mask: [page.getByLabel("Your name")],
+  });
 });
 
 test("arena at the start of a match", async ({ page }) => {
